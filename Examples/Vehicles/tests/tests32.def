@@ -1,0 +1,7 @@
+; Alias/Rename the mangled exports with C-like/human-readable external names...
+
+EXPORTS
+TestAllVehicles_Main=?Main@TestAllVehicles@@SAHHQAPAD@Z
+TestCallback_Main=?Main@TestCallback@@SAHHQAPAD@Z
+TestPerformance_Main=?Main@TestPerformance@@SAHHQAPAD@Z
+TestPerformanceArrayAccess_Main=?Main@TestPerformanceArrayAccess@@SAHHQAPAD@Z

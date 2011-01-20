@@ -1,0 +1,15 @@
+#include "@wcfc_Header@"
+
+#ifdef CABLE_CONFIGURATION
+namespace _cable_
+{
+  const char* const package = "mummy.Runtime";
+  const char* const package_version = "@Mummy_VERSION_MAJOR@.@Mummy_VERSION_MINOR@.@Mummy_VERSION_PATCH@";
+  const char* const group = "Runtime";
+
+  namespace wrappers
+  {
+    typedef @wcfc_Class@ @wcfc_ClassName@;
+  }
+}
+#endif

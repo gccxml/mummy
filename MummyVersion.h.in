@@ -1,0 +1,54 @@
+//----------------------------------------------------------------------------
+// MummyVersion.h
+//
+// Author(s) : David Cole
+//
+// Copyright (C) 2006-2009 Kitware, Inc.
+//----------------------------------------------------------------------------
+
+#define Mummy_VERSION_MAJOR @Mummy_VERSION_MAJOR@
+#define Mummy_VERSION_MINOR @Mummy_VERSION_MINOR@
+#define Mummy_VERSION_PATCH @Mummy_VERSION_PATCH@
+#define Mummy_VERSION_SVN_REVISION @Mummy_VERSION_SVN_REVISION@
+
+#define Mummy_VERSION_STRING "@Mummy_VERSION_STRING@"
+#define Mummy_FULL_VERSION_STRING "@Mummy_FULL_VERSION_STRING@"
+
+// "SCS" == source control system (svn, cvs, etc)
+//
+#define Mummy_SCS_Author "@Mummy_SCS_Author@"
+#define Mummy_SCS_Date "@Mummy_SCS_Date@"
+#define Mummy_SCS_Id "@Mummy_SCS_Id@"
+#define Mummy_SCS_Revision "@Mummy_SCS_Revision@"
+#define Mummy_SCS_URL "@Mummy_SCS_URL@"
+
+// "WC" == working copy variables extracted from 'svn info' using the
+// Subversion_WC_INFO CMake macro courtesy of FIND_PACKAGE(Subversion)
+//
+#define Mummy_SVN_VERSION "@Subversion_VERSION_SVN@"
+#define Mummy_WC_URL "@Mummy_WC_URL@"
+#define Mummy_WC_REVISION "@Mummy_WC_REVISION@"
+#define Mummy_WC_LAST_CHANGED_AUTHOR "@Mummy_WC_LAST_CHANGED_AUTHOR@"
+#define Mummy_WC_LAST_CHANGED_REV "@Mummy_WC_LAST_CHANGED_REV@"
+#define Mummy_WC_LAST_CHANGED_DATE "@Mummy_WC_LAST_CHANGED_DATE@"
+
+// 'svn status' info:
+//
+#define Mummy_SVN_STATUS_BRIEF "@Mummy_SVN_STATUS_BRIEF@"
+#define Mummy_SVN_STATUS_ENCODED "@Mummy_SVN_STATUS_ENCODED@"
+
+// raw 'svn info' and 'svn status' results:
+//
+#if 0
+// <svn-info>
+@Mummy_WC_INFO@
+// </svn-info>
+
+// <svn-status>
+@Mummy_SVN_STATUS@
+// </svn-status>
+#endif
+
+// CableSwig revision info:
+//
+#define Mummy_CableSwig_CVS_REVISION "@Mummy_CableSwig_CVS_REVISION@"

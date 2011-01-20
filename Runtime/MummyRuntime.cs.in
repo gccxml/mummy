@@ -1,0 +1,850 @@
+//----------------------------------------------------------------------------
+//
+//  $Id: MummyRuntime.cs.in 470 2009-06-12 17:43:02Z hoffman $
+//
+//  $Author: hoffman $
+//  $Date: 2009-06-12 13:43:02 -0400 (Fri, 12 Jun 2009) $
+//  $Revision: 470 $
+//
+//  Copyright (C) 2007 Kitware, Inc.
+//
+//----------------------------------------------------------------------------
+
+using System.Runtime.InteropServices; // DllImport and HandleRef both live here
+
+// Online .NET Framework help at:
+// http://msdn2.microsoft.com/en-us/library/d11h6832(VS.80).aspx
+
+namespace Kitware.mummy.Runtime
+{
+
+/// <summary>
+/// </summary>
+public class Methods
+{
+   // Construct exactly one instance of Runtime when this dll is loaded.
+   // This object is a singleton.
+   //
+   private static Methods Instance = new Methods();
+
+   // Map of "System.IntPtr" to "object" -- added to and removed from
+   // by instances/methods of WrappedObject:
+   //
+   private System.Collections.Hashtable WrappedObjectsTable = null;
+   private uint WrappedObjectsTableHits = 0;
+   private uint WrappedObjectsTableMisses = 0;
+
+   // Map of "string" to "System.Type" -- added to by client dlls
+   // that have create-able types:
+   //
+   private System.Collections.Hashtable RegisteredTypes = null;
+
+   // Collection of assemblies that implement registered types:
+   //
+   private System.Collections.Hashtable RegisteredAssemblies = null;
+
+   // Direct index based array of "System.Type" -- added to "on demand"
+   // as a type is requested...
+   //
+   private System.Collections.ArrayList IndexedConstructors = null;
+
+   // Delegate/Id of callback handler for tracking refcount changes on
+   // the unmanaged side:
+   //
+   private delegate void ObjectRefCountChangedCallback(System.IntPtr arg0, uint arg1, uint arg2);
+   private ObjectRefCountChangedCallback Callback = null;
+   private uint CallbackId = System.UInt32.MaxValue;
+
+   // Flag for whether or not to call Trace from methods defined in this
+   // file:
+   //
+   private static bool TraceInternalCalls = false;
+
+   // Flags for whether or not to emit to console or debugger output window
+   // when Trace is called:
+   //
+   private static bool TraceToConsoleError = true;
+   private static bool TraceToConsoleOut = false;
+   private static bool TraceToDebug = true;
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// Export layer functions for 'Runtime' are exported from
+   /// the DLL named by the value of this variable.
+   /// </summary>
+   public const string RuntimeEL_dll = "@CMAKE_SHARED_LIBRARY_PREFIX@Kitware.mummy.Runtime.Unmanaged@CMAKE_SHARED_LIBRARY_SUFFIX@";
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private Methods()
+   {
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   ~Methods()
+   {
+      ForceRemoveCallbacksImpl();
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static void Trace(string s)
+   {
+      if (TraceToConsoleError)
+      {
+         System.Console.Error.WriteLine(s);
+      }
+
+      if (TraceToConsoleOut)
+      {
+         System.Console.Out.WriteLine(s);
+      }
+
+      if (TraceToDebug)
+      {
+         System.Diagnostics.Debug.WriteLine(s);
+      }
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private void Instance_ObjectRefCountChangedCallback(System.IntPtr rawCppThis, uint oldCount, uint newCount)
+   {
+      if (2==newCount && 1==oldCount)
+      {
+         // Becoming a "strongly referenced object" on the unmanaged side. Keep
+         // a strong reference to it in the table:
+         this.EnsureStrongTableReference(rawCppThis);
+      }
+      else if (1==newCount && 2==oldCount)
+      {
+         // Only our table-held managed wrapper is left referencing the object
+         // on the unmanaged side. Convert our table-held reference to a weak
+         // reference:
+         this.EnsureWeakTableReference(rawCppThis);
+      }
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private void EnsureStrongTableReference(System.IntPtr rawCppThis)
+   {
+      if (null != this.WrappedObjectsTable)
+      {
+         lock(this.WrappedObjectsTable.SyncRoot)
+         {
+            if (this.WrappedObjectsTable.ContainsKey(rawCppThis))
+            {
+               System.WeakReference wr = this.WrappedObjectsTable[rawCppThis] as System.WeakReference;
+               if (null != wr)
+               {
+                  // Replace the WeakReference with the actual object:
+                  this.WrappedObjectsTable[rawCppThis] = wr.Target;
+                  if (TraceInternalCalls)
+                  {
+                     Trace(System.String.Format("rawCppThis '0x{0:x8}' converted to strong table reference", (long)rawCppThis));
+                  }
+               }
+            }
+         }
+      }
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private void EnsureWeakTableReference(System.IntPtr rawCppThis)
+   {
+      if (null != this.WrappedObjectsTable)
+      {
+         lock(this.WrappedObjectsTable.SyncRoot)
+         {
+            if (this.WrappedObjectsTable.ContainsKey(rawCppThis))
+            {
+               object obj = this.WrappedObjectsTable[rawCppThis];
+               System.WeakReference wr = obj as System.WeakReference;
+               if (null == wr)
+               {
+                  // Replace the actual object with a WeakReference:
+                  this.WrappedObjectsTable[rawCppThis] = new System.WeakReference(obj);
+                  if (TraceInternalCalls)
+                  {
+                     Trace(System.String.Format("rawCppThis '0x{0:x8}' converted to weak table reference", (long)rawCppThis));
+                  }
+               }
+            }
+         }
+      }
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private void AddTableReferenceImpl(System.IntPtr rawCppThis, object obj, bool strong)
+   {
+      if (rawCppThis == System.IntPtr.Zero)
+      {
+         throw new System.Exception(System.String.Format("error: A 'null' rawCppThis pointer may not be used as a WrappedObjectsTable key."));
+      }
+
+      if (null == this.WrappedObjectsTable)
+      {
+         this.WrappedObjectsTable = new System.Collections.Hashtable();
+         this.Callback = new ObjectRefCountChangedCallback(this.Instance_ObjectRefCountChangedCallback);
+         this.CallbackId = AddObjectRefCountChangedCallback(this.Callback);
+      }
+
+      lock(this.WrappedObjectsTable.SyncRoot)
+      {
+         if (this.WrappedObjectsTable.ContainsKey(rawCppThis))
+         {
+            System.WeakReference wr = this.WrappedObjectsTable[rawCppThis] as System.WeakReference;
+
+            if (null == wr)
+            {
+               throw new System.Exception(System.String.Format("error: Duplicate rawCppThis - existing strong reference. Attempting to add '0x{0:x8}' again.", (long)rawCppThis));
+            }
+
+            if (wr.IsAlive)
+            {
+               if (strong)
+               {
+                  throw new System.Exception(System.String.Format("error: Duplicate rawCppThis - weak reference that is still alive. Attempting to add '0x{0:x8}' again.", (long)rawCppThis));
+               }
+               else
+               {
+                  // For now, early in the "table-fied mummy" adoption process, allow
+                  // a weak reference to replace another weak reference. The assumption
+                  // here is that the C++ object has gone away and is being replaced by
+                  // another C++ object since the C++ object allocator is likely to reuse
+                  // the same pointer value for a subsequent allocation...
+                  //
+                  // Ideally, we should have had a refcount on that object, but some mummy
+                  // wrapped objects are not refcounted and some do not have fully proper
+                  // bug-free refcounting yet...
+                  //
+                  Trace("");
+                  Trace(System.String.Format("error: potential refcounting error: Duplicate rawCppThis - weak reference that is still alive. Attempting to add '0x{0:x8}' again.", (long)rawCppThis));
+                  Trace(System.String.Format("       Allowing new wrapped object to take over table key..."));
+                  Trace(System.String.Format("       Original object should *not* have been destroyed while we still had it in our table without notifying us..."));
+                  Trace("");
+               }
+            }
+         }
+
+         if (strong)
+         {
+            this.WrappedObjectsTable[rawCppThis] = obj;
+            if (TraceInternalCalls)
+            {
+               Trace(System.String.Format("rawCppThis '0x{0:x8}' added as strong table reference", (long)rawCppThis));
+            }
+         }
+         else
+         {
+            this.WrappedObjectsTable[rawCppThis] = new System.WeakReference(obj);
+            if (TraceInternalCalls)
+            {
+               Trace(System.String.Format("rawCppThis '0x{0:x8}' added as weak table reference", (long)rawCppThis));
+            }
+         }
+      }
+   }
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static void AddTableReference(System.IntPtr rawCppThis, object obj, bool strong)
+   {
+      Instance.AddTableReferenceImpl(rawCppThis, obj, strong);
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private void RemoveTableReferenceImpl(System.IntPtr rawCppThis)
+   {
+      if (null != this.WrappedObjectsTable)
+      {
+         lock(this.WrappedObjectsTable.SyncRoot)
+         {
+            this.WrappedObjectsTable.Remove(rawCppThis);
+            if (TraceInternalCalls)
+            {
+               Trace(System.String.Format("rawCppThis '0x{0:x8}' removed", (long)rawCppThis));
+            }
+         }
+      }
+   }
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static void RemoveTableReference(System.IntPtr rawCppThis)
+   {
+      Instance.RemoveTableReferenceImpl(rawCppThis);
+   }
+
+
+   //-------------------------------------------------------------------------
+   [DllImport(RuntimeEL_dll, EntryPoint = "Kitware_mummy_Runtime_AddObjectRefCountChangedCallback")]
+   private static extern uint Kitware_mummy_Runtime_AddObjectRefCountChangedCallback(ObjectRefCountChangedCallback cb);
+
+   /// <summary>
+   /// </summary>
+   private static uint AddObjectRefCountChangedCallback(ObjectRefCountChangedCallback cb)
+   {
+      uint rv = Kitware_mummy_Runtime_AddObjectRefCountChangedCallback(cb);
+      return rv;
+   }
+
+
+   //-------------------------------------------------------------------------
+   [DllImport(RuntimeEL_dll, EntryPoint = "Kitware_mummy_Runtime_GetTypeEntryCount")]
+   internal static extern uint Kitware_mummy_Runtime_GetTypeEntryCount();
+
+   /// <summary>
+   /// </summary>
+   public static uint GetTypeEntryCount()
+   {
+      uint rv = Kitware_mummy_Runtime_GetTypeEntryCount();
+      return rv;
+   }
+
+
+   //-------------------------------------------------------------------------
+   [DllImport(RuntimeEL_dll, EntryPoint = "Kitware_mummy_Runtime_GetTypeEntryClassNameKey")]
+   internal static extern System.IntPtr Kitware_mummy_Runtime_GetTypeEntryClassNameKey(uint mteIndex);
+
+   /// <summary>
+   /// </summary>
+   public static string GetTypeEntryClassNameKey(uint mteIndex)
+   {
+      string rv = Marshal.PtrToStringAnsi(Kitware_mummy_Runtime_GetTypeEntryClassNameKey(mteIndex));
+      return rv;
+   }
+
+
+   //-------------------------------------------------------------------------
+   [DllImport(RuntimeEL_dll, EntryPoint = "Kitware_mummy_Runtime_RemoveObjectRefCountChangedCallback")]
+   internal static extern void Kitware_mummy_Runtime_RemoveObjectRefCountChangedCallback(uint cbid);
+
+   /// <summary>
+   /// </summary>
+   private static void RemoveObjectRefCountChangedCallback(uint cbid)
+   {
+      Kitware_mummy_Runtime_RemoveObjectRefCountChangedCallback(cbid);
+   }
+
+
+   /// <summary>
+   /// Wrapped classes need to call RegisterType somehow from their static class
+   /// initialization. The first time the RegisterType method sees a given assembly
+   /// it will force all the static constructors in that assumbly to execute at that
+   /// time. This has the effect of forcing all RegisterType calls for a whole assembly
+   /// as a result of the first RegisterType call from that assembly. After which point,
+   /// any creatable class located in that assembly should be available in the
+   /// RegisteredTypes table.
+   /// </summary>
+   private void ForceReferenceStaticConstructors(System.Reflection.Assembly assembly, string classNameKey)
+   {
+      if (TraceInternalCalls)
+      {
+         Trace(System.String.Format("Force loading types from assembly: {0}", assembly.GetName().FullName));
+      }
+
+      foreach(System.Type et in assembly.GetExportedTypes())
+      {
+         if (et.IsClass)
+         {
+            System.Reflection.FieldInfo fi = et.GetField("MRClassNameKey");
+
+            if (null != fi && fi.IsStatic)
+            {
+               // Referencing the static field by calling fi.GetValue forces the
+               // static constructor to be called, which then calls us back with
+               // a RegisterType call.
+               //
+               string s = fi.GetValue(null) as string;
+
+               if (null == s)
+               {
+                 throw new System.Exception(System.String.Format("error: could not get field value MRClassNameKey for class '{0}'.", et.Name));
+               }
+            }
+         }
+      }
+   }
+
+   private void RegisterTypeImpl(System.Reflection.Assembly assembly, string classNameKey, System.Type t)
+   {
+      if (null == this.RegisteredAssemblies)
+      {
+         this.RegisteredAssemblies = new System.Collections.Hashtable();
+      }
+
+      if (null == this.RegisteredTypes)
+      {
+         this.RegisteredTypes = new System.Collections.Hashtable();
+      }
+
+      if (null == this.RegisteredAssemblies[assembly])
+      {
+         this.RegisteredAssemblies[assembly] = assembly;
+         ForceReferenceStaticConstructors(assembly, classNameKey);
+      }
+
+      if (null != this.RegisteredTypes[classNameKey])
+      {
+         throw new System.Exception(System.String.Format("error: RegisterType called more than once with classNameKey='{0}'. Class key duplicated in multiple assemblies? Static initializer called more than once?", classNameKey));
+      }
+
+      this.RegisteredTypes[classNameKey] = t;
+   }
+
+   /// <summary>
+   /// </summary>
+   public static void RegisterType(System.Reflection.Assembly assembly, string classNameKey, System.Type t)
+   {
+      Instance.RegisterTypeImpl(assembly, classNameKey, t);
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private uint ClassNameKeyToIndex(string classNameKey)
+   {
+      // david.cole::fix - TODO - make this another table that does a
+      // quicker lookup than this stupid for loop of the index based on
+      // the classNameKey...
+      //
+      bool found = false;
+      uint i = 0;
+      uint n = GetTypeEntryCount();
+
+      for (i = 0; !found && i < n; ++i)
+      {
+         if (classNameKey == GetTypeEntryClassNameKey(i))
+         {
+            return i;
+         }
+      }
+
+      // Invalid mteIndex value:
+      //
+      return System.UInt32.MaxValue;
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private System.Reflection.ConstructorInfo GetConstructorInfo(uint mteIndex)
+   {
+      System.Reflection.ConstructorInfo ci = null;
+
+      // First look in IndexedConstructors if possible:
+      //
+      if (null != this.IndexedConstructors)
+      {
+         if (mteIndex < this.IndexedConstructors.Count)
+         {
+            ci = (System.Reflection.ConstructorInfo)this.IndexedConstructors[(int)mteIndex];
+
+            if (null != ci)
+            {
+               if (TraceInternalCalls)
+               {
+                  Trace("info: found ci in IndexedConstructors");
+               }
+            }
+         }
+      }
+
+      // ci not in IndexedConstructors; call over to unmanaged side to get the
+      // classNameKey for this mteIndex and lookup by classNameKey in
+      // RegisteredTypes and get the correct constructor. Then save ci in
+      // IndexedConstructors to make subsequent lookups fast.
+      //
+      if (null == ci)
+      {
+         string classNameKey = GetTypeEntryClassNameKey(mteIndex);
+         System.Type t = null;
+
+         if (null != this.RegisteredTypes)
+         {
+            t = (System.Type) this.RegisteredTypes[classNameKey];
+         }
+         if (null == t)
+         {
+            throw new System.Exception(System.String.Format(
+               "error: could not get registered type - mteIndex='{0}' classNameKey='{1}'",
+               mteIndex, classNameKey));
+         }
+
+         // Get a constructor for type t with 3 params of the expected types:
+         //
+         System.Type[] ctorParamTypes = new System.Type[3];
+         ctorParamTypes[0] = System.Type.GetType("System.IntPtr");
+         ctorParamTypes[1] = System.Type.GetType("System.Boolean");
+         ctorParamTypes[2] = System.Type.GetType("System.Boolean");
+         ci = t.GetConstructor(ctorParamTypes);
+         if (null == ci)
+         {
+            throw new System.Exception(
+               "error: expected 3 parameter constructor is unavailable - is it public?");
+         }
+
+         // Save ci in IndexedConstructors to make future lookups lightning fast:
+         //
+         if (TraceInternalCalls)
+         {
+            Trace(
+               System.String.Format("info: found ci via RegisteredTypes lookup - mteIndex: {0} - classNameKey: {1}", mteIndex, classNameKey));
+         }
+
+         if (null == this.IndexedConstructors)
+         {
+            this.IndexedConstructors = new System.Collections.ArrayList(128);
+         }
+
+         if (mteIndex < this.IndexedConstructors.Count &&
+            null != this.IndexedConstructors[(int)mteIndex])
+         {
+            throw new System.Exception(System.String.Format(
+               "error: IndexedConstructors table already has a non-null entry at mteIndex {0}", mteIndex));
+         }
+
+         // Add null ConstructorInfo objects to our list until we can call [(int)mteIndex]
+         // without getting the "list not big enough to set at that index" exception...
+         // The null values may get overwritten later when those types are required for
+         // CreateWrappedObject calls. Or maybe not.
+         //
+         while (mteIndex >= this.IndexedConstructors.Count)
+         {
+            this.IndexedConstructors.Add(null);
+         }
+
+         this.IndexedConstructors[(int)mteIndex] = ci;
+      }
+
+      if (null == ci)
+      {
+         throw new System.Exception("error: mteIndex yields null System.Type in GetSystemType...");
+      }
+
+      return ci;
+   }
+
+
+   /// <summary>
+   /// Factory method to create a wrapped object from a registered TypeEntry.
+   /// Client dlls that provide objects should register their known types via
+   /// RegisterType prior to any possible call to CreateWrappedObject.
+   /// </summary>
+   private object CreateWrappedObjectImpl(uint mteStatus, uint mteIndex, uint rawRefCount, System.IntPtr rawCppThis, bool callDisposalMethod, out bool created)
+   {
+      object obj = null;
+
+      if (null != this.WrappedObjectsTable)
+      {
+        lock(this.WrappedObjectsTable.SyncRoot)
+        {
+           obj = this.WrappedObjectsTable[rawCppThis];
+
+           System.WeakReference wr = obj as System.WeakReference;
+           if (null != wr)
+           {
+              obj = wr.Target;
+           }
+        }
+      }
+
+      if (null != obj)
+      {
+         created = false;
+         ++WrappedObjectsTableHits;
+      }
+      else
+      {
+         created = true;
+         ++WrappedObjectsTableMisses;
+
+         // Get a constructor info for the type of the object we're supposed
+         // to create via mteIndex:
+         //
+         System.Reflection.ConstructorInfo ci = GetConstructorInfo(mteIndex);
+
+         // Invoke the constructor with parameters:
+         bool strong = true;
+         if (0 == mteStatus || rawRefCount < 2)
+         {
+            strong = false;
+         }
+
+         object[] ctorParams = new object[3];
+         ctorParams[0] = rawCppThis;
+         ctorParams[1] = callDisposalMethod;
+         ctorParams[2] = strong;
+
+         obj = ci.Invoke(ctorParams);
+      }
+
+      return obj;
+   }
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// Used for the quickest table-based creation possible where we know the
+   /// mteIndex directly.
+   /// </summary>
+   public static object CreateWrappedObject(uint mteStatus, uint mteIndex, uint rawRefCount, System.IntPtr rawCppThis, bool callDisposalMethod, out bool found)
+   {
+      return Instance.CreateWrappedObjectImpl(mteStatus, mteIndex, rawRefCount, rawCppThis, callDisposalMethod, out found);
+   }
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private object CreateWrappedObjectImpl(string classNameKey, System.IntPtr rawCppThis, bool callDisposalMethod, out bool found)
+   {
+      uint mteIndex = ClassNameKeyToIndex(classNameKey);
+      return this.CreateWrappedObjectImpl(0, mteIndex, 1, rawCppThis, callDisposalMethod, out found);
+   }
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// Used for EventArgs creation where we know the class name, but not the
+   /// mteIndex.
+   /// </summary>
+   public static object CreateWrappedObject(string classNameKey, System.IntPtr rawCppThis, bool callDisposalMethod, out bool found)
+   {
+      return Instance.CreateWrappedObjectImpl(classNameKey, rawCppThis, callDisposalMethod, out found);
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static string PrintIndexedConstructorsTable()
+   {
+      int i;
+      string s = "";
+      if (null != Instance && null != Instance.IndexedConstructors)
+      {
+         s = System.String.Format("{0}\n  Instance.IndexedConstructors details:", s);
+         s = System.String.Format("{0}\n    Count: {1}", s, Instance.IndexedConstructors.Count);
+
+         i = 0;
+         lock (Instance.IndexedConstructors.SyncRoot)
+         {
+            foreach (System.Reflection.ConstructorInfo ci in Instance.IndexedConstructors)
+            {
+               s = System.String.Format("{0}\n    Entry: {1}", s, i);
+               s = System.String.Format("{0}\n         ci: {1}", s, ci);
+               ++i;
+            }
+         }
+      }
+      Trace(s);
+      return s;
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static string PrintRegisteredAssembliesTable()
+   {
+      int i;
+      string s = "";
+      if (null != Instance && null != Instance.RegisteredAssemblies)
+      {
+         s = System.String.Format("{0}\n  Instance.RegisteredAssemblies details:", s);
+         s = System.String.Format("{0}\n    Count: {1}", s, Instance.RegisteredAssemblies.Count);
+
+         i = 0;
+         lock (Instance.RegisteredAssemblies.SyncRoot)
+         {
+            foreach (System.Collections.DictionaryEntry de in Instance.RegisteredAssemblies)
+            {
+               s = System.String.Format("{0}\n    Entry: {1}", s, i);
+               s = System.String.Format("{0}\n        Key: {1}", s, de.Key);
+               s = System.String.Format("{0}\n      Value: {1}", s, de.Value);
+               ++i;
+            }
+         }
+      }
+      Trace(s);
+      return s;
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static string PrintRegisteredTypesTable()
+   {
+      int i;
+      string s = "";
+      if (null != Instance)
+      {
+         if (null != Instance.RegisteredTypes)
+         {
+            s = System.String.Format("{0}\n  Instance.RegisteredTypes details:", s);
+            s = System.String.Format("{0}\n    Count: {1}", s, Instance.RegisteredTypes.Count);
+
+            i = 0;
+            lock (Instance.RegisteredTypes.SyncRoot)
+            {
+               foreach (System.Collections.DictionaryEntry de in Instance.RegisteredTypes)
+               {
+                  s = System.String.Format("{0}\n    Entry: {1}", s, i);
+                  s = System.String.Format("{0}\n        Key: {1}", s, de.Key);
+                  s = System.String.Format("{0}\n      Value: {1}", s, de.Value);
+                  ++i;
+               }
+            }
+         }
+      }
+      Trace(s);
+      return s;
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static string PrintWrappedObjectsTable()
+   {
+      int i;
+      string s = "";
+      if (null != Instance && null != Instance.WrappedObjectsTable)
+      {
+         s = System.String.Format("{0}\n  Instance.WrappedObjectsTable details:", s);
+         s = System.String.Format("{0}\n    Count: {1}", s, Instance.WrappedObjectsTable.Count);
+
+         i = 0;
+         lock (Instance.WrappedObjectsTable.SyncRoot)
+         {
+            foreach (System.Collections.DictionaryEntry de in Instance.WrappedObjectsTable)
+            {
+               s = System.String.Format("{0}\n    Entry: {1}", s, i);
+               s = System.String.Format("{0}\n        Key: 0x{1:x8}", s, (long)(System.IntPtr)de.Key);
+               s = System.String.Format("{0}\n      Value: {1}", s, de.Value);
+               ++i;
+            }
+         }
+      }
+      Trace(s);
+      return s;
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static string Print(bool details)
+   {
+      string s = System.String.Format("  Instance: {0}", Instance);
+
+      if (null != Instance)
+      {
+         s = System.String.Format("{0}\n  Instance.WrappedObjectsTable: {1}", s, Instance.WrappedObjectsTable);
+         s = System.String.Format("{0}\n  Instance.WrappedObjectsTableHits: {1}", s, Instance.WrappedObjectsTableHits);
+         s = System.String.Format("{0}\n  Instance.WrappedObjectsTableMisses: {1}", s, Instance.WrappedObjectsTableMisses);
+         s = System.String.Format("{0}\n  Instance.RegisteredTypes: {1}", s, Instance.RegisteredTypes);
+         s = System.String.Format("{0}\n  Instance.RegisteredAssemblies: {1}", s, Instance.RegisteredAssemblies);
+         s = System.String.Format("{0}\n  Instance.IndexedConstructors: {1}", s, Instance.IndexedConstructors);
+         s = System.String.Format("{0}\n  Instance.CallbackId: {1}", s, Instance.CallbackId);
+      }
+
+      s = System.String.Format("{0}\n  TraceInternalCalls: {1}", s, TraceInternalCalls);
+      s = System.String.Format("{0}\n  TraceToConsoleError: {1}", s, TraceToConsoleError);
+      s = System.String.Format("{0}\n  TraceToConsoleOut: {1}", s, TraceToConsoleOut);
+      s = System.String.Format("{0}\n  TraceToDebug: {1}", s, TraceToDebug);
+
+      Trace(s);
+
+      if (details)
+      {
+         s = System.String.Format("{0}\n\n{1}", s, PrintIndexedConstructorsTable());
+         s = System.String.Format("{0}\n\n{1}", s, PrintRegisteredAssembliesTable());
+         s = System.String.Format("{0}\n\n{1}", s, PrintRegisteredTypesTable());
+         s = System.String.Format("{0}\n\n{1}", s, PrintWrappedObjectsTable());
+      }
+
+      return s;
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static string Print()
+   {
+      return Print(true);
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static bool Verify()
+   {
+      return true;
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static void ForceClearWrappedObjectsTable()
+   {
+      if (null != Instance.WrappedObjectsTable)
+      {
+         Instance.WrappedObjectsTable.Clear();
+      }
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   private void ForceRemoveCallbacksImpl()
+   {
+      if (System.UInt32.MaxValue != this.CallbackId)
+      {
+         RemoveObjectRefCountChangedCallback(this.CallbackId);
+         this.Callback = null;
+         this.CallbackId = System.UInt32.MaxValue;
+      }
+   }
+
+
+   //-------------------------------------------------------------------------
+   /// <summary>
+   /// </summary>
+   public static void ForceRemoveCallbacks()
+   {
+      Instance.ForceRemoveCallbacksImpl();
+   }
+}
+
+}

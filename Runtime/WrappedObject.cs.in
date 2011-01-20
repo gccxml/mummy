@@ -1,0 +1,135 @@
+//----------------------------------------------------------------------------
+//
+// This file is hand-written and configured into the build using CMake.
+//
+// Input to configure step is:
+//   "@CMAKE_CURRENT_SOURCE_DIR@/WrappedObject.cs.in"
+//
+// WrappedObject is the hand-crafted base class for all mummy-generated C#
+// classes. mummy-generated classes should *all* derive from WrappedObject
+// *or* be strictly Value objects (C# structs)...
+//
+
+
+//----------------------------------------------------------------------------
+using System;
+using System.Runtime.InteropServices; // DllImport and HandleRef both live here
+
+
+//----------------------------------------------------------------------------
+namespace mummy
+{
+  /// <summary>
+  /// Hand-crafted base class for mummy-generated C# classes.
+  /// </summary>
+  public class WrappedObject : IDisposable
+  {
+    //------------------------------------------------------------------------
+    // For each _cable_::group listed in any gccxml input file (the .cxx.in
+    // files that get configured and then sent through gccxml) there needs to
+    // be a const string variable here that names the export-layer dll from
+    // which a class's export layer functions are exported...
+    //
+    // For example, for a group = "vtkCommon" there needs to be a variable
+    // named @CMAKE_SHARED_LIBRARY_PREFIX@vtkCommonEL_dll and its value needs to be the actual name of the
+    // dll file that it represents... (which is either @CMAKE_SHARED_LIBRARY_PREFIX@vtkEL@CMAKE_SHARED_LIBRARY_SUFFIX@ or
+    // @CMAKE_SHARED_LIBRARY_PREFIX@vtkCommonEL@CMAKE_SHARED_LIBRARY_SUFFIX@ depending on if you build one big export layer dll or
+    // one for each kit...)
+    //------------------------------------------------------------------------
+
+    //------------------------------------------------------------------------
+    /// <summary>
+    /// Export layer functions for 'Runtime' are exported from
+    /// the DLL named by the value of this variable.
+    /// </summary>
+    protected const string RuntimeEL_dll = "@CMAKE_SHARED_LIBRARY_PREFIX@Kitware.mummy.Runtime.Unmanaged@CMAKE_SHARED_LIBRARY_SUFFIX@";
+
+    //------------------------------------------------------------------------
+    private HandleRef CppThis;
+    private bool CallDisposalMethod;
+
+    //------------------------------------------------------------------------
+    /// <summary>
+    /// Protected constructor. Only called from derived classes.
+    /// </summary>
+    protected WrappedObject(IntPtr rawCppThis, bool callDisposalMethod)
+    {
+      this.CppThis = new HandleRef(this, rawCppThis);
+      this.CallDisposalMethod = callDisposalMethod;
+    }
+
+    /// <summary>
+    /// Finalizer/destructor. Called automatically by the garbage collector.
+    /// </summary>
+    ~WrappedObject()
+    {
+      this.Dispose(false);
+    }
+
+    /// <summary>
+    /// Get the HandleRef that links the C++ 'this' pointer of the
+    /// underlying unmanaged object to 'this'.
+    /// </summary>
+    public HandleRef GetCppThis()
+    {
+      return this.CppThis;
+    }
+
+    /// <summary>
+    /// Set the C++ 'this' pointer of the underlying unmanaged object. DO NOT
+    /// CALL THIS METHOD DIRECTLY. This method is called automatically as
+    /// needed by generated code.
+    /// </summary>
+    protected void SetCppThis(IntPtr rawCppThis, bool callDisposalMethod)
+    {
+      this.CppThis = new HandleRef(this, rawCppThis);
+      this.CallDisposalMethod = callDisposalMethod;
+    }
+
+    /// <summary>
+    /// Clear the C++ 'this' pointer of the underlying unmanaged object. DO
+    /// NOT CALL THIS METHOD DIRECTLY. This method is called automatically as
+    /// needed by generated code.
+    /// </summary>
+    protected void ClearCppThis()
+    {
+      this.CppThis = new HandleRef();
+      this.CallDisposalMethod = false;
+    }
+
+    /// <summary>
+    /// Returns true if this instance of WrappedObject responsible for
+    /// calling an unmanaged disposal method when it is being disposed of.
+    /// DO NOT CALL THIS METHOD DIRECTLY. This method is called automatically
+    /// as needed by generated code.
+    /// </summary>
+    protected bool GetCallDisposalMethod()
+    {
+      return this.CallDisposalMethod;
+    }
+
+    //------------------------------------------------------------------------
+    /// <summary>
+    /// Public implementation of IDisposable. You can call this method prior
+    /// to a WrappedObject going out of scope (and prior to the garbage
+    /// collector processing it) to force an early disconnection from the
+    /// underlying unmanaged object. After calling this method, any attempt
+    /// to cross the boundary to unmanaged code will likely result in an
+    /// exception. If you do call this method, it should be the last thing
+    /// you do with a WrappedObject...
+    /// </summary>
+    public void Dispose()
+    {
+      this.Dispose(true);
+      GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Generated subclasses override this method to call a disposal method
+    /// in the unmanaged code.
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+    }
+  }
+}

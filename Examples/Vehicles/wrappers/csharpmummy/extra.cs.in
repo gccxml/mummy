@@ -1,0 +1,16 @@
+//----------------------------------------------------------------------------
+//
+// This hand-crafted version is no longer necessary as of May 8, 2007 since
+// mummy automatically wraps "C++ main style param pairs" now...
+//
+//----------------------------------------------------------------------------
+//
+//  [DllImport("tests", EntryPoint = "@test@_Main")]
+//  static extern int @test@_Main(int argc, [In, Out] string[] argv);
+//
+//  public static void Main(string[] args)
+//  {
+//    @test@_Main(args.Length, args);
+//  }
+//
+//----------------------------------------------------------------------------

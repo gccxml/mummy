@@ -1,0 +1,96 @@
+# Set Mummy_DIR to the directory containing this file for FIND_PACKAGE(Mummy)
+# to work automatically...
+#
+GET_FILENAME_COMPONENT(Mummy_CONFIG_FILE "${CMAKE_CURRENT_LIST_FILE}" ABSOLUTE)
+GET_FILENAME_COMPONENT(Mummy_CONFIG_DIR "${Mummy_CONFIG_FILE}" PATH)
+GET_FILENAME_COMPONENT(Mummy_BASE_DIR "${Mummy_CONFIG_DIR}/../.." ABSOLUTE)
+
+# A mummy build-tree OR install-tree should look like this:
+#
+#   ${Mummy_BASE_DIR}
+#   --bin
+#   ----*.dll
+#   ----*.exe
+#   ----*.lib
+#   --include
+#   ----mummy-@Mummy_VERSION_MAJOR@.@Mummy_VERSION_MINOR@.@Mummy_VERSION_PATCH@
+#   ------*.h
+#   --share
+#   ----mummy-@Mummy_VERSION_MAJOR@.@Mummy_VERSION_MINOR@.@Mummy_VERSION_PATCH@
+#   ------mummyConfig.cmake   <---   this file is Mummy_CONFIG_FILE
+
+SET(Mummy_VERSION_MAJOR "@Mummy_VERSION_MAJOR@")
+SET(Mummy_VERSION_MINOR "@Mummy_VERSION_MINOR@")
+SET(Mummy_VERSION_PATCH "@Mummy_VERSION_PATCH@")
+SET(Mummy_VERSION_SVN_REVISION "@Mummy_VERSION_SVN_REVISION@")
+SET(Mummy_VERSION_STRING "@Mummy_VERSION_STRING@")
+
+SET(Mummy_32_BIT "@Mummy_32_BIT@")
+
+# If "mummy" does not exist in "bin" then find the first one that
+# does exist in a configuration type subdir of "bin."
+# Mummy_CMAKE_CONFIGURATION_TYPES is a list of possible configuration
+# types in "recommended" order. First existing one found wins.
+#
+SET(Mummy_CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@")
+SET(Mummy_CMAKE_CONFIGURATION_TYPES "@Mummy_CMAKE_CONFIGURATION_TYPES@")
+
+IF(NOT mummy_EXECUTABLE)
+  SET(mummy_EXECUTABLE "${Mummy_BASE_DIR}/bin/mummy@CMAKE_EXECUTABLE_SUFFIX@")
+ENDIF()
+
+IF(NOT EXISTS "${mummy_EXECUTABLE}")
+  FOREACH(Mummy_CONFIGURATION_TYPE ${Mummy_CMAKE_CONFIGURATION_TYPES})
+    IF(NOT EXISTS "${mummy_EXECUTABLE}")
+    IF(EXISTS "${Mummy_BASE_DIR}/bin/${Mummy_CONFIGURATION_TYPE}/mummy@CMAKE_EXECUTABLE_SUFFIX@")
+      SET(mummy_EXECUTABLE "${Mummy_BASE_DIR}/bin/${Mummy_CONFIGURATION_TYPE}/mummy@CMAKE_EXECUTABLE_SUFFIX@")
+    ENDIF()
+    ENDIF()
+  ENDFOREACH()
+ENDIF()
+
+# Set these two variables based on the value of mummy_EXECUTABLE so that
+# the BIN_DIR and LIB_DIR vars match the selected mummy_EXECUTABLE. Since
+# mummy_EXECUTABLE is set as a cache variable, an end user may choose a
+# new mummy executable and then do another configure. Make sure mummy DIR
+# vars are empty for a mummy in "bin" and match the selected config for
+# a mummy in a config-based build tree...
+#
+SET(Mummy_CONFIG_DIR_SUFFIX "")
+SET(Mummy_SELECTED_CONFIGURATION "")
+
+IF("${mummy_EXECUTABLE}" MATCHES ".*/bin/([^/]+)/mummy.*")
+  STRING(REGEX REPLACE ".*/bin/([^/]+)/mummy.*" "\\1"
+    Mummy_SELECTED_CONFIGURATION "${mummy_EXECUTABLE}"
+    )
+ENDIF()
+
+IF(Mummy_SELECTED_CONFIGURATION)
+  SET(Mummy_CONFIG_DIR_SUFFIX "/${Mummy_SELECTED_CONFIGURATION}")
+ENDIF()
+
+# Set all else based on Mummy_BASE_DIR and Mummy_CONFIG_DIR_SUFFIX:
+#
+SET(Mummy_BIN_DIR
+  "${Mummy_BASE_DIR}/bin${Mummy_CONFIG_DIR_SUFFIX}"
+  )
+
+IF(Mummy_32_BIT)
+  SET(Mummy_BIN_x64_DIR
+    "${Mummy_BASE_DIR}/bin/x64${Mummy_CONFIG_DIR_SUFFIX}"
+    )
+ELSE()
+  SET(Mummy_BIN_x64_DIR
+    "${Mummy_BASE_DIR}/bin${Mummy_CONFIG_DIR_SUFFIX}"
+    )
+ENDIF()
+
+SET(Mummy_INCLUDE_DIRS
+  "${Mummy_BASE_DIR}/include/mummy-${Mummy_VERSION_STRING}"
+  )
+
+SET(Mummy_RUNTIME_LINK_LIBRARIES
+  "${Mummy_BIN_DIR}/@Mummy_RUNTIME_UNMANAGED_LINK_LIBRARY@"
+  )
+
+SET(mummy_EXECUTABLE "${mummy_EXECUTABLE}" CACHE FILEPATH "FILEPATH to mummy@CMAKE_EXECUTABLE_SUFFIX@")

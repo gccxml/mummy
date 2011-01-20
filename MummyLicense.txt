@@ -1,0 +1,12 @@
+/// mummy
+///
+/// C# (+?) wrapping tool developed by the team at Kitware, Inc.
+/// http://www.kitware.com
+///
+/// Built using gccxml output and the Cable libs for in-memory
+/// source code object model representation.
+///
+/// (C) 2006-2007 Kitware, Inc.
+/// All rights reserved.
+///
+/// Official licensing for mummy is still to be determined...

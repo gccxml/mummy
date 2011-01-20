@@ -1,0 +1,14 @@
+using System;
+
+namespace Vehicles
+{
+
+class @test@Exe
+{
+  public static void Main(string[] args)
+  {
+    @test@.Main(args);
+  }
+}
+
+}

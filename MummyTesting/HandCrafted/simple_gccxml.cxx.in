@@ -1,0 +1,15 @@
+#include "simple.h"
+
+#ifdef CABLE_CONFIGURATION
+namespace _cable_
+{
+  const char* const package = "Kitware.mummy.Testing.HandCrafted";
+  const char* const package_version = "@Mummy_VERSION_MAJOR@.@Mummy_VERSION_MINOR@.@Mummy_VERSION_PATCH@";
+  const char* const group = "";
+
+  namespace wrappers
+  {
+    typedef simple simple;
+  }
+}
+#endif

@@ -1,0 +1,16 @@
+#include "@header@"
+
+#ifdef CABLE_CONFIGURATION
+namespace _cable_
+{
+  const char* const package = "Vehicles";
+  const char* const package_version = "0.3.1";
+  const char* const group = "@kit@";
+
+  namespace wrappers
+  {
+    typedef @cxxclass@ @cxxclass@_W;
+  }
+
+}
+#endif

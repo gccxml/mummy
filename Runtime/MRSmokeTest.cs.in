@@ -1,0 +1,89 @@
+using System;
+using System.Runtime.InteropServices; // DllImport and HandleRef both live here
+
+namespace Kitware.mummy.Runtime
+{
+
+/// <summary>
+/// </summary>
+public class MRSmokeTest : Kitware.mummy.Runtime.WrappedObject
+{
+   /// <summary>
+   /// Automatically generated type registration mechanics.
+   /// </summary>
+   public new static readonly string MRClassNameKey = "@MRSMOKETEST_CLASS_NAME_KEY@";
+
+   /// <summary>
+   /// Automatically generated type registration mechanics.
+   /// </summary>
+   public new const string MRFullTypeName = "Kitware.mummy.Runtime.MRSmokeTest";
+
+   /// <summary>
+   /// Automatically generated type registration mechanics.
+   /// </summary>
+   static MRSmokeTest()
+   {
+      Kitware.mummy.Runtime.Methods.RegisterType(
+         System.Reflection.Assembly.GetExecutingAssembly(),
+         MRClassNameKey,
+         System.Type.GetType(MRFullTypeName)
+         );
+   }
+
+
+   /// <summary>
+   /// Automatically generated constructor - called from generated code.
+   /// DO NOT call directly.
+   /// </summary>
+   public MRSmokeTest(IntPtr rawCppThis, bool callDisposalMethod, bool strong) : base(rawCppThis, callDisposalMethod, strong)
+   {
+   }
+
+
+   [DllImport("@CMAKE_SHARED_LIBRARY_PREFIX@MRSmokeTest@CMAKE_SHARED_LIBRARY_SUFFIX@", EntryPoint = "MRSmokeTest_new")]
+   internal static extern IntPtr MRSmokeTest_new();
+
+   /// <summary>
+   /// </summary>
+   public MRSmokeTest(bool strong) : this(MRSmokeTest_new(), true, strong)
+   {
+   }
+
+
+   [DllImport("@CMAKE_SHARED_LIBRARY_PREFIX@MRSmokeTest@CMAKE_SHARED_LIBRARY_SUFFIX@", EntryPoint = "MRSmokeTest_delete")]
+   internal static extern void MRSmokeTest_delete(HandleRef pThis);
+
+   /// <summary>
+   /// </summary>
+   protected override void Dispose(bool disposing)
+   {
+      if (this.GetCallDisposalMethod())
+      {
+         MRSmokeTest_delete(this.GetCppThis());
+         this.ClearCppThis();
+      }
+
+      base.Dispose(disposing);
+   }
+
+
+   [DllImport("@CMAKE_SHARED_LIBRARY_PREFIX@MRSmokeTest@CMAKE_SHARED_LIBRARY_SUFFIX@", EntryPoint = "MRSmokeTest_Clone_01")]
+   internal static extern IntPtr MRSmokeTest_Clone_01(HandleRef pThis);
+
+   /// <summary>
+   /// </summary>
+   public MRSmokeTest Clone()
+   {
+      MRSmokeTest rv = null;
+
+      IntPtr rvp = MRSmokeTest_Clone_01(this.GetCppThis());
+      if (IntPtr.Zero != rvp)
+      {
+         rv = new MRSmokeTest(rvp, true, false);
+      }
+
+      return rv;
+   }
+}
+
+}

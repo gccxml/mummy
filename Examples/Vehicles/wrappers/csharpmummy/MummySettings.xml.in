@@ -1,0 +1,130 @@
+<MummySettings>
+
+  <Class name="RefCountedVehicle" wrappable="true"
+    shadow="false"
+    partial="@PartialValue@"
+    defaultFactoryMethod="Create"
+    emitDefaultFactoryMethod="true"
+    defaultDisposalMethod="Destroy"
+    registerMethod="IncrRefCount(System.IntPtr.Zero)"
+    unRegisterMethod="DecrRefCount(System.IntPtr.Zero)"
+    getRefCountMethod="GetRefCount()"
+    registerBaseClass="RefCountedVehicle"
+    registerInclude="#include &quot;RefCountedVehicle.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    exceptionBaseClass="Oops"
+    exceptionCloneMethod="Clone"
+    exceptionInclude="#include &quot;Oops.h&quot;"
+    countedMethodsRegex="^GetThatVehicle(Alias|ByAnyOtherName)$"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    excludeMarkedLines="true"
+    />
+
+  <Class name="BlatMobile" wrappable="true"
+    shadow="true"
+    partial="@PartialValue@"
+    defaultFactoryMethod="Create"
+    emitDefaultFactoryMethod="true"
+    defaultDisposalMethod="Destroy"
+    registerMethod="IncrRefCount()"
+    unRegisterMethod="DecrRefCount()"
+    getRefCountMethod="GetRefCount()"
+    registerBaseClass="BlatMobile"
+    registerInclude="#include &quot;BlatMobile.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    exceptionBaseClass="Oops"
+    exceptionCloneMethod="Clone"
+    exceptionInclude="#include &quot;Oops.h&quot;"
+    />
+
+  <Class name="SignatureSeries" wrappable="true"
+    shadow="false"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    exceptionBaseClass="Oops"
+    exceptionCloneMethod="Clone"
+    exceptionInclude="#include &quot;Oops.h&quot;"
+    />
+
+  <Class name="SimpleVehicle" wrappable="true"
+    shadow="false"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    />
+
+  <Class name="TestAllVehicles" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraCsharpCode="TestAllVehiclesExtra.cs"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    />
+
+  <Class name="TestCallback" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraCsharpCode="TestCallbackExtra.cs"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    />
+
+  <Class name="TestPerformance" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraCsharpCode="TestPerformanceExtra.cs"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    />
+
+  <Class name="TestPerformanceArrayAccess" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraCsharpCode="TestPerformanceArrayAccessExtra.cs"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    />
+
+  <Class name="Oops" wrappable="true"
+    defaultDisposalMethod="Delete"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedException"
+    />
+
+  <!-- Class patterns to include in wrapped layers -->
+  <ClassPattern pattern=".+" sortkey="001" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    />
+
+  <!-- Increase coverage by having multiple ClassPattern elements with
+       sortkey attributes - also add extra otherwise-uncovered attributes -->
+  <ClassPattern pattern="^ThereAreNoClassesThatMatchThis$" sortkey="002" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="true"
+    partial="@PartialValue@"
+    wrappedObjectBase="WrappedObject"
+    emitDefaultFactoryMethod="true"
+    excludeMarkedLines="true"
+    />
+
+  <!-- Classes to exclude from wrapped layers -->
+  <Class name="UnwrappedClass" wrappable="false"/>
+
+  <!-- Class patterns to exclude from wrapped layers -->
+  <ClassPattern pattern=".+&lt;.+&gt;" wrappable="false"/>
+
+  <!-- "using" statement C# namespaces that cannot be derived from C++ namespaces -->
+  <!-- (This particular example is somewhat useless and is just here to exercise -->
+  <!--  the code in mummy that reads this setting and generates appropriate C# code) -->
+  <Reference name="System.Text"/>
+
+</MummySettings>

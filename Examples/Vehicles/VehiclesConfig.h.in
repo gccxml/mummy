@@ -1,0 +1,91 @@
+#ifndef VehiclesConfig_h
+#define VehiclesConfig_h
+
+
+#cmakedefine BUILD_SHARED_LIBS
+
+
+#ifdef _WIN32
+#ifdef BUILD_SHARED_LIBS
+
+
+#ifdef base_EXPORTS
+#define base_dll __declspec(dllexport)
+#else
+#define base_dll __declspec(dllimport)
+#endif
+
+
+#ifdef cars_EXPORTS
+#define cars_dll __declspec(dllexport)
+#else
+#define cars_dll __declspec(dllimport)
+#endif
+
+
+#ifdef motorcycles_EXPORTS
+#define motorcycles_dll __declspec(dllexport)
+#else
+#define motorcycles_dll __declspec(dllimport)
+#endif
+
+
+#ifdef suvs_EXPORTS
+#define suvs_dll __declspec(dllexport)
+#else
+#define suvs_dll __declspec(dllimport)
+#endif
+
+
+#ifdef tests_EXPORTS
+#define tests_dll __declspec(dllexport)
+#else
+#define tests_dll __declspec(dllimport)
+#endif
+
+
+#endif // BUILD_SHARED_LIBS
+#endif // _WIN32
+
+
+// If not defined by one of the above blocks,
+// define as empty:
+//
+#ifndef base_dll
+#define base_dll
+#endif
+
+#ifndef cars_dll
+#define cars_dll
+#endif
+
+#ifndef motorcycles_dll
+#define motorcycles_dll
+#endif
+
+#ifndef suvs_dll
+#define suvs_dll
+#endif
+
+#ifndef tests_dll
+#define tests_dll
+#endif
+
+
+// Abstract "types" for 64-bit integers:
+//
+#ifdef _MSC_VER
+#define VehicleInt64 __int64
+#define VehicleUInt64 unsigned __int64
+#else
+#define VehicleInt64 long long
+#define VehicleUInt64 unsigned long long
+#endif
+
+
+// Include the inline wrapper hints everywhere:
+//
+#include "InlineWrapperHints.h"
+
+
+#endif

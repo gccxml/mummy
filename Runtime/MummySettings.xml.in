@@ -1,0 +1,15 @@
+<MummySettings>
+
+  <!-- Individual classes to include in wrapped layers -->
+
+  <!-- Individual classes to exclude from wrapped layers -->
+
+  <!-- Class patterns to include in wrapped layers -->
+  <ClassPattern pattern=".+" wrappable="true"/>
+
+  <!-- Class patterns to exclude from wrapped layers -->
+  <ClassPattern pattern=".+&lt;.+&gt;" wrappable="false"/>
+
+  <!-- "using" statement C# namespaces that cannot be derived from C++ namespaces -->
+
+</MummySettings>

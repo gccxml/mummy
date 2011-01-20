@@ -1,0 +1,7 @@
+<MummySettings>
+
+  <Class name="simple" wrappable="true"
+    extraCsharpCode="handCraftedSimpleExtra.cs"
+    />
+
+</MummySettings>
