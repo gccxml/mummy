@@ -12,7 +12,7 @@ ENDIF("${Mummy_BINARY_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 #
 SET(Mummy_VERSION_MAJOR 1)
 SET(Mummy_VERSION_MINOR 0)
-SET(Mummy_VERSION_PATCH 1)
+SET(Mummy_VERSION_PATCH 2)
 SET(Mummy_VERSION_STRING "${Mummy_VERSION_MAJOR}.${Mummy_VERSION_MINOR}.${Mummy_VERSION_PATCH}")
 IF(Mummy_BUILD_IS_TOP_LEVEL)
   SET(Mummy_INSTALL_PREFIX "${CMAKE_BINARY_DIR} Install" CACHE STRING "")
@@ -23,10 +23,10 @@ ENDIF(Mummy_BUILD_IS_TOP_LEVEL)
 # time *this* file was committed):
 #
 SET(Mummy_SCS_Author "$Author: david.cole $")
-SET(Mummy_SCS_Date "$Date: 2010-11-12 12:23:12 -0500 (Fri, 12 Nov 2010) $")
-SET(Mummy_SCS_Id "$Id: CMakeLists.txt 518 2010-11-12 17:23:12Z david.cole $")
-SET(Mummy_SCS_Revision "$Revision: 518 $")
-SET(Mummy_SCS_URL "$URL: https://www.kitware.com/svn/ActiViz/trunk/mummy/CMakeLists.txt $")
+SET(Mummy_SCS_Date "$Date: 2011-01-27 $")
+SET(Mummy_SCS_Id "$Id: CMakeLists.txt $")
+SET(Mummy_SCS_Revision "$Revision: 599 $")
+SET(Mummy_SCS_URL "$URL: git://public.kitware.com/mummy.git $")
 
 # Use these settings when building with the Msvc compiler:
 #
@@ -178,7 +178,14 @@ ENDIF("${Mummy_SVN_STATUS}" STREQUAL "")
 
 # Pull in FindSubversion.cmake to get the Subversion_WC_INFO macro:
 #
-SET(Mummy_VERSION_SVN_REVISION "0")
+
+SET(Mummy_VERSION_SVN_REVISION "599")
+  #
+  # This value is an artificial number that is simply incremented manually
+  # now after switching to git from svn... Whenever we do "real packaging
+  # releases" this number should be incremented manually until this code
+  # is updated to reflect our shiny, new git repo-ness.
+
 IF(Mummy_SOURCE_TREE_IS_SVN_CHECKOUT)
   SET(Subversion_SVN_EXECUTABLE "${svn_EXECUTABLE}")
   FIND_PACKAGE(Subversion)
