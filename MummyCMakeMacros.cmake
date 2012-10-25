@@ -40,7 +40,7 @@ MACRO(ADD_CSHARP_EXECUTABLE ace_ExeName ace_DependentTargets ace_References ace_
     SET(ace_CscRefs ${ace_CscRefs} "/reference:${ace_rr}")
   ENDFOREACH(ace_r)
 
-  SET(ace_CscLinkResources "")
+  SET(ace_CscLinkResourceArgs "")
   FOREACH(ace_lr ${ace_LinkResources})
     SET(ace_item "${ace_lr}")
     IF(NOT "${ace_item}" MATCHES "/")
@@ -49,7 +49,7 @@ MACRO(ADD_CSHARP_EXECUTABLE ace_ExeName ace_DependentTargets ace_References ace_
     IF(WIN32)
       STRING(REGEX REPLACE "/" "\\\\" ace_item "${ace_item}")
     ENDIF(WIN32)
-    SET(ace_CscLinkResources ${ace_CscLinkResources} "/linkresource:${ace_item}")
+    SET(ace_CscLinkResourceArgs ${ace_CscLinkResourceArgs} "/linkresource:${ace_item}")
   ENDFOREACH(ace_lr)
 
   SET(ace_CscArgs "")
@@ -65,6 +65,15 @@ MACRO(ADD_CSHARP_EXECUTABLE ace_ExeName ace_DependentTargets ace_References ace_
     STRING(REGEX REPLACE "/" "\\\\" ace_CscOut "${ace_CscOut}")
     STRING(REGEX REPLACE "/" "\\\\" ace_CscDoc "${ace_CscDoc}")
   ENDIF(WIN32)
+
+  IF(CMAKE_CONFIGURATION_TYPES AND DEFINED MUMMY_ADD_CSHARP_CONFIG)
+    STRING(REPLACE "${CMAKE_CFG_INTDIR}" "${MUMMY_ADD_CSHARP_CONFIG}"
+      ace_CscLinkResourceArgs "${ace_CscLinkResourceArgs}")
+    FOREACH(ace_f ${ace_CscLinkResourceArgs})
+      SET(ace_CscArgs "${ace_CscArgs}\"${ace_f}\"\n")
+    ENDFOREACH(ace_f)
+    SET(ace_CscLinkResourceArgs "")
+  ENDIF()
 
   IF(NOT "${ace_SnkFile}" STREQUAL "")
     SET(ace_f "${ace_SnkFile}")
@@ -98,7 +107,7 @@ MACRO(ADD_CSHARP_EXECUTABLE ace_ExeName ace_DependentTargets ace_References ace_
       COMMAND ${csc_EXECUTABLE}
       ARGS ${CSC_DEBUG_FLAG} ${CSC_PLATFORM_FLAG}
         "/out:${ace_CscOut}" "/doc:${ace_CscDoc}" "/target:exe"
-        ${ace_CscLinkResources}
+        ${ace_CscLinkResourceArgs}
         ${ace_CscRefs}
         "@${ace_BinDir}/${ace_ExeName}.CscArgs.txt"
       COMMENT "Building C# executable '${ace_ExeName}'..."
@@ -158,7 +167,7 @@ MACRO(ADD_CSHARP_LIBRARY acl_LibName acl_DependentTargets acl_References acl_Lin
     SET(acl_CscRefs ${acl_CscRefs} "/reference:${acl_rr}")
   ENDFOREACH(acl_r)
 
-  SET(acl_CscLinkResources "")
+  SET(acl_CscLinkResourceArgs "")
   FOREACH(acl_lr ${acl_LinkResources})
     SET(acl_item "${acl_lr}")
     IF(NOT "${acl_item}" MATCHES "/")
@@ -167,7 +176,7 @@ MACRO(ADD_CSHARP_LIBRARY acl_LibName acl_DependentTargets acl_References acl_Lin
     IF(WIN32)
       STRING(REGEX REPLACE "/" "\\\\" acl_item "${acl_item}")
     ENDIF(WIN32)
-    SET(acl_CscLinkResources ${acl_CscLinkResources} "/linkresource:${acl_item}")
+    SET(acl_CscLinkResourceArgs ${acl_CscLinkResourceArgs} "/linkresource:${acl_item}")
   ENDFOREACH(acl_lr)
 
   SET(acl_CscArgs "")
@@ -183,6 +192,15 @@ MACRO(ADD_CSHARP_LIBRARY acl_LibName acl_DependentTargets acl_References acl_Lin
     STRING(REGEX REPLACE "/" "\\\\" acl_CscOut "${acl_CscOut}")
     STRING(REGEX REPLACE "/" "\\\\" acl_CscDoc "${acl_CscDoc}")
   ENDIF(WIN32)
+
+  IF(CMAKE_CONFIGURATION_TYPES AND DEFINED MUMMY_ADD_CSHARP_CONFIG)
+    STRING(REPLACE "${CMAKE_CFG_INTDIR}" "${MUMMY_ADD_CSHARP_CONFIG}"
+      acl_CscLinkResourceArgs "${acl_CscLinkResourceArgs}")
+    FOREACH(acl_f ${acl_CscLinkResourceArgs})
+      SET(acl_CscArgs "${acl_CscArgs}\"${acl_f}\"\n")
+    ENDFOREACH()
+    SET(acl_CscLinkResourceArgs "")
+  ENDIF()
 
   IF(NOT "${acl_SnkFile}" STREQUAL "")
     SET(acl_f "${acl_SnkFile}")
@@ -216,7 +234,7 @@ MACRO(ADD_CSHARP_LIBRARY acl_LibName acl_DependentTargets acl_References acl_Lin
       COMMAND ${csc_EXECUTABLE}
       ARGS ${CSC_DEBUG_FLAG} ${CSC_PLATFORM_FLAG}
         "/out:${acl_CscOut}" "/doc:${acl_CscDoc}" "/target:library"
-        ${acl_CscLinkResources}
+        ${acl_CscLinkResourceArgs}
         ${acl_CscRefs}
         "@${acl_BinDir}/${acl_LibName}.CscArgs.txt"
       COMMENT "Building C# library '${acl_LibName}'..."
