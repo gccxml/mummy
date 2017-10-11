@@ -461,9 +461,19 @@ bool ReturnTypeMatchesHintType(
   // Values of 'type' currently present in the VTK hints file are:
   //
   if      (utype ==  "301") { ftid = cxx::FundamentalType::Float; }
+  else if (utype == "303") { ftid = cxx::FundamentalType::Char; }
   else if (utype ==  "304") { ftid = cxx::FundamentalType::Int; }
+  else if (utype == "305") { ftid = cxx::FundamentalType::ShortInt; }
+  else if (utype == "306") { ftid = cxx::FundamentalType::LongInt; }
   else if (utype ==  "307") { ftid = cxx::FundamentalType::Double; }
+  else if (utype == "313") { ftid = cxx::FundamentalType::UnsignedChar; }
+  else if (utype == "314") { ftid = cxx::FundamentalType::UnsignedInt; }
+  else if (utype == "315") { ftid = cxx::FundamentalType::UnsignedShortInt; }
+  else if (utype == "316") { ftid = cxx::FundamentalType::UnsignedLongInt; }
   else if (utype ==  "30A") { ftid = cxx::FundamentalType::Int; } // vtkIdType (could be 32 or 64 bit...)
+  else if (utype == "30B") { ftid = cxx::FundamentalType::LongLongInt; } // vtkIdType (could be 32 or 64 bit...)
+  else if (utype == "30D") { ftid = cxx::FundamentalType::SignedChar; }
+  else if (utype == "31B") { ftid = cxx::FundamentalType::UnsignedLongLongInt; }
   else if (utype == "2307") { ftid = cxx::FundamentalType::Double; } // 0x2307 == double* + something?
 
   if (cxx::FundamentalType::NumberOfTypes == ftid)
@@ -927,7 +937,7 @@ bool MummyCsharpGenerator::MethodWrappableAsEvent(const cable::Method* m, const 
       if (cable::Function::FunctionId == m->GetFunctionId() ||
         cable::Function::MethodId == m->GetFunctionId())
         {
-        wrappableAsEvent = HasAttribute(m, "gccxml(iwhEvent)");
+        wrappableAsEvent = HasAnnotation(m, "iwhEvent");
         }
       }
     }
@@ -961,7 +971,7 @@ bool MummyCsharpGenerator::MethodIsWrappable(const cable::Method* m, const cable
   if (m && wrappable)
     {
     hasDeprecatedAttribute = HasAttribute(m, "deprecated");
-    hasExcludeAttribute = HasAttribute(m, "gccxml(iwhExclude)");
+    hasExcludeAttribute = HasAnnotation(m, "iwhExclude");
 
     if (hasDeprecatedAttribute || hasExcludeAttribute)
       {
@@ -1010,7 +1020,7 @@ bool MummyCsharpGenerator::MethodIsWrappable(const cable::Method* m, const cable
             else if (hasExcludeAttribute)
               {
               LogWarning(mw_CouldNotWrap, << m->GetNameOfClass() << " '" << m->GetName()
-                << "' could not be wrapped because it is marked with the 'gccxml(iwhExclude)' attribute..." << gxsys_ios::endl);
+				  << "' could not be wrapped because it is marked with the 'iwhExclude' annotation..." << gxsys_ios::endl);
               }
             else if (isExcludedViaBtxEtx)
               {
@@ -1232,7 +1242,7 @@ gxsys_stl::string MummyCsharpGenerator::GetPInvokeTypeString(const cable::Type *
 
     case cable::Type::ReferenceTypeId:
       {
-      cable::Type *nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
+      nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
       cable::Type::TypeIdType nested_type_id = nested_type->GetTypeId();
 
       s = "ERROR_ReferenceTypeId_not_yet_implemented_for_nested_type";
@@ -1373,7 +1383,7 @@ gxsys_stl::string MummyCsharpGenerator::GetCSharpTypeString(const cable::Type *t
 
     case cable::Type::ReferenceTypeId:
       {
-      cable::Type *nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
+      nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
       cable::Type::TypeIdType nested_type_id = nested_type->GetTypeId();
 
       s = "ERROR_ReferenceTypeId_not_yet_implemented_for_nested_type";
@@ -1660,7 +1670,7 @@ bool MummyCsharpGenerator::MethodReturnValueIsCounted(const cable::Class *c, con
     return true;
     }
 
-  if (HasAttribute(m, "gccxml(iwhCounted)"))
+  if (HasAnnotation(m, "iwhCounted"))
     {
     return true;
     }
@@ -3509,7 +3519,7 @@ void MummyCsharpGenerator::EmitCSharpWrapperClassAsStruct(gxsys_ios::ostream &os
   gxsys_stl::string fieldType;
   gxsys_stl::vector<gxsys_stl::string> docblock;
   bool isPartial = this->GetSettings()->GetPartialClass(c);
-  bool fieldAccess = !HasAttribute(c, "gccxml(iwhNoFieldAccess)");
+  bool fieldAccess = !HasAnnotation(c, "iwhNoFieldAccess");
 
   // First iterate and collect all the fields in a local vector:
   //
@@ -3879,7 +3889,7 @@ bool MummyCsharpGenerator::ValidateWrappedMethods(
           "'Getter' method '" << m->GetName() << "' has arguments. Should it?");
         }
 
-      if (!iwhPropGetExempt && !HasAttribute(m, "gccxml(iwhPropGet)"))
+      if (!iwhPropGetExempt && !HasAnnotation(m, "iwhPropGet"))
         {
         if (!voidReturn && 0==cArgs)
           {
@@ -3904,7 +3914,7 @@ bool MummyCsharpGenerator::ValidateWrappedMethods(
       {
       // It's a "setter" : warn if it's missing the iwhPropSet hint:
       //
-      if (!HasAttribute(m, "gccxml(iwhPropSet)"))
+      if (!HasAnnotation(m, "iwhPropSet"))
         {
         if (voidReturn && 1==cArgs)
           {
@@ -3946,8 +3956,8 @@ void MummyCsharpGenerator::BuildPropGetsAndSetsMap(
 
   for (mit = wrapped_methods.begin(); mit != wrapped_methods.end(); ++mit)
     {
-    addingPropGet = HasAttribute(*mit, "gccxml(iwhPropGet)");
-    addingPropSet = addingPropGet ? false : HasAttribute(*mit, "gccxml(iwhPropSet)");
+    addingPropGet = HasAnnotation(*mit, "iwhPropGet");
+    addingPropSet = addingPropGet ? false : HasAnnotation(*mit, "iwhPropSet");
 
     if (addingPropGet || addingPropSet)
       {
@@ -4632,7 +4642,7 @@ void MummyCsharpGenerator::EmitCSharpWrapperClass(gxsys_ios::ostream &os, const 
         bool isDelegate = false;
         gxsys_stl::string tname(t->GetName());
 
-        //isDelegate = HasAttribute(t, "gccxml(iwhDelegate)");
+        //isDelegate = HasAnnotation(t, "iwhDelegate");
 
         cable::PointerType *pt = cable::PointerType::SafeDownCast(t->GetType());
         cable::FunctionType *ft = 0;

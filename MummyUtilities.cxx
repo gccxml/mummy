@@ -37,6 +37,14 @@
 
 #include "string.h" // strlen
 
+#ifdef IWH_USE_GCCXML_ATTRIBUTE
+const std::string ANNOTATION_TEXT = "gccxml";
+#else
+const std::string ANNOTATION_TEXT = "annotate";
+#endif
+
+const std::string ANNOTATION_FORMAT("%s(%s");
+const std::string ANNOTATION_REGULAR_EXPRESSION_FORMAT("(%s\\(%s)([^\\)]*)(\\))");
 
 //----------------------------------------------------------------------------
 void Trace(const char *s)
@@ -160,16 +168,13 @@ bool HasMapToType(const cable::Type *t)
 {
 	if (IsObject(t))
 	{
-		return HasAttribute(cable::ClassType::SafeDownCast(t)->GetClass(),
-			"gccxml(iwhMapToType");
+		return HasAnnotation(cable::ClassType::SafeDownCast(t)->GetClass(),"iwhMapToType");
 	}
 
 	if ((cable::Type::ReferenceTypeId == t->GetTypeId()) &&
 		IsObject(cable::ReferenceType::SafeDownCast(t)->GetTarget()))
 	{
-		return HasAttribute(cable::ClassType::SafeDownCast(
-			cable::ReferenceType::SafeDownCast(t)->GetTarget())->GetClass(),
-			"gccxml(iwhMapToType");
+		return HasAnnotation(cable::ClassType::SafeDownCast(cable::ReferenceType::SafeDownCast(t)->GetTarget())->GetClass(),"iwhMapToType");
 	}
 
 	return false;
@@ -566,29 +571,42 @@ bool HasAttribute(const cable::SourceObject *o, const char *attr)
 	return false;
 }
 
+//----------------------------------------------------------------------------
+bool HasAnnotation(const gxsys_stl::string& atts, const gxsys_stl::string& tag)
+{
+	if (atts != "")
+	{
+		char* text = new char[ANNOTATION_FORMAT.length() + ANNOTATION_TEXT.length() + tag.length()];
+		sprintf(text, ANNOTATION_FORMAT.c_str(), ANNOTATION_TEXT.c_str(), tag.c_str());
+		return (gxsys_stl::string::npos != atts.find(text));
+	}
+
+	return false;
+}
+
+//----------------------------------------------------------------------------
+bool HasAnnotation(const cable::SourceObject *o, const gxsys_stl::string& tag)
+{
+	gxsys_stl::string atts(o->GetAttributes());
+	return HasAnnotation(atts, tag);
+}
 
 //----------------------------------------------------------------------------
 bool IsUtilityClass(const cable::Class *c)
 {
-	return HasAttribute(c, "gccxml(iwhUtility)");
+	return HasAnnotation(c, "iwhUtility");
 }
-
 
 //----------------------------------------------------------------------------
 gxsys_stl::string ExtractAttribute(const gxsys_stl::string& atts, const gxsys_stl::string& attBase)
 {
 	gxsys_stl::string extracted;
-	bool hasAtt = false;
-
-	if (gxsys_stl::string::npos != atts.find(gxsys_stl::string("gccxml(") + attBase))
+	if (HasAnnotation(atts, attBase))
 	{
-		hasAtt = true;
-	}
-
-	if (hasAtt)
-	{
+		char* text = new char[ANNOTATION_REGULAR_EXPRESSION_FORMAT.length() + ANNOTATION_TEXT.length() + attBase.length()];
+		sprintf(text, ANNOTATION_REGULAR_EXPRESSION_FORMAT.c_str(), ANNOTATION_TEXT.c_str(), attBase.c_str());
 		gxsys::RegularExpression re;
-		re.compile((gxsys_stl::string("(gccxml\\(")+attBase+")([^\\)]*)(\\))").c_str());
+		re.compile(text);
 		if (re.find(atts.c_str()))
 		{
 			extracted = re.match(2);

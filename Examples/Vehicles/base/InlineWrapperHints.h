@@ -14,9 +14,14 @@
 // Source for that documentation is in "GXFront/gxDocumentation.cxx"
 //
 #ifdef IWH_USE_GCCXML_ATTRIBUTE
-#define gxa(x) __attribute((gccxml(#x)))
+  #define gxa(x) __attribute((gccxml(#x)))
 #else
-#define gxa(x)
+  //if being "built" with castxml, use the annotate attribute:
+  #ifdef __CASTXML__   
+    #define gxa(x) __attribute((annotate(#x)))
+  #else
+    #define gxa(x)
+  #endif
 #endif
 
 //----------------------------------------------------------------------------
