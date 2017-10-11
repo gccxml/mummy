@@ -429,23 +429,23 @@ gxsys_stl::string /* MummyCsharpShadowLayerGenerator:: */ GetVariantTypeString(c
       //
       if (IsObject(nested_type))
         {
-        s = "I4";
+		  s = "PTR";
         }
       else if (IsChar(nested_type))
         {
-        s = "I4";
+        s = "PTR";
         }
       else if (IsVoid(nested_type))
         {
-        s = "I4";
+		  s = "PTR";
         }
       else if (cable::Type::FundamentalTypeId == nested_type->GetTypeId())
         {
-        s = "I4";
+        s = "PTR";
         }
       else if (cable::Type::PointerTypeId == nested_type->GetTypeId())
         {
-        s = "I4 /* pointer */";
+		  s = "PTR";
         }
       else
         {
@@ -514,23 +514,23 @@ gxsys_stl::string /* MummyCsharpShadowLayerGenerator:: */ GetVariantTypeCastingS
       //
       if (IsObject(nested_type))
         {
-        s = "(int) ";
+        s = "(uintptr_t) ";
         }
       else if (IsChar(nested_type))
         {
-        s = "(int) ";
+        s = "(uintptr_t) ";
         }
       else if (IsVoid(nested_type))
         {
-        s = "(int) ";
+        s = "(uintptr_t) ";
         }
       else if (cable::Type::FundamentalTypeId == nested_type->GetTypeId())
         {
-        s = "(int) ";
+        s = "(uintptr_t) ";
         }
       else if (cable::Type::PointerTypeId == nested_type->GetTypeId())
         {
-        s = "(int) /* pointer */";
+        s = "(uintptr_t) /* pointer */";
         }
       else
         {
@@ -809,20 +809,27 @@ void MummyCsharpShadowLayerGenerator::EmitClassImplementationForShadowLayer(gxsy
         Emit(os, vargs.c_str());
         Emit(os, ");\n");
 
+		cable::Type *paramType = (*mit)->GetFunctionType()->GetArgument(argi);
+		std::string paramTypeName = GetVariantTypeString(paramType);
+
         EmitIndent(os, 3);
         Emit(os, "V_VT(");
         Emit(os, vargs.c_str());
         Emit(os, ") = VT_");
-        Emit(os, GetVariantTypeString((*mit)->GetFunctionType()->GetArgument(argi)).c_str());
+        Emit(os, paramTypeName.c_str());
         Emit(os, ";\n");
 
         EmitIndent(os, 3);
         Emit(os, "V_");
-        Emit(os, GetVariantTypeString((*mit)->GetFunctionType()->GetArgument(argi)).c_str());
+		if (paramTypeName == "PTR")
+		{
+			paramTypeName = "UINT_" + paramTypeName;
+		}
+		Emit(os, paramTypeName.c_str());
         Emit(os, "(");
         Emit(os, vargs.c_str());
         Emit(os, ") = ");
-        Emit(os, GetVariantTypeCastingString((*mit)->GetFunctionType()->GetArgument(argi)).c_str());
+        Emit(os, GetVariantTypeCastingString(paramType).c_str());
         Emit(os, GetArgName((*mit)->GetFunctionType(), argi));
         Emit(os, ";\n");
 
@@ -878,7 +885,12 @@ void MummyCsharpShadowLayerGenerator::EmitClassImplementationForShadowLayer(gxsy
         Emit(os, "rv = (");
         Emit(os, retType->GetCxxType().GetName().c_str());
         Emit(os, ") V_");
-        Emit(os, GetVariantTypeString(retType).c_str());
+		std::string returnTypeName = GetVariantTypeString(retType);
+		if (returnTypeName == "PTR")
+		{
+			returnTypeName = "UINT_" + returnTypeName;
+		}
+        Emit(os, returnTypeName.c_str());
         Emit(os, "(&msl_result);\n");
         EmitIndent(os, 4);
         Emit(os, "}\n");
