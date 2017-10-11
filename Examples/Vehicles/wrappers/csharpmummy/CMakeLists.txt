@@ -63,6 +63,22 @@ MACRO(WRAP_KIT kit lang ext)
   SET(${kit}_${lang}_wrapper_source_files "")
   SET(${kit}_${lang}_wrapper_source_files_cmake "")
   SET(${kit}_EL_SOURCES "")
+
+IF(${gccxml_EXECUTABLE} MATCHES "castxml")
+    SET(executable_output -o ${CMAKE_CURRENT_BINARY_DIR})
+
+	IF(MSVC)
+		SET(castxml_options -fms-compatibility -fms-extensions -fmsc-version=${MSVC_VERSION} --castxml-cc-msvc ${CMAKE_CXX_COMPILER})
+	ELSE(MSVC)
+		SET(castxml_options --castxml-cc-gnu ${CMAKE_CXX_COMPILER})
+	ENDIF(MSVC)
+
+	SET(executable_options --castxml-start _cable_ --castxml-gccxml ${castxml_options} -D__CASTXML__)
+ELSE(${gccxml_EXECUTABLE} MATCHES "castxml")
+    SET(executable_output -fxml=${CMAKE_CURRENT_BINARY_DIR})
+	SET(executable_options -fxml-start=_cable_ --gccxml-compiler ${CMAKE_CXX_COMPILER})
+ENDIF(${gccxml_EXECUTABLE} MATCHES "castxml")
+
   FOREACH(cxxclass ${class_list})
     SET(header "${cxxclass}.h")
 
@@ -78,15 +94,13 @@ MACRO(WRAP_KIT kit lang ext)
     IF(EXISTS "${${kit}_include_dirs}/${cxxclass}.h")
       SET(header_fullpath "${${kit}_include_dirs}/${cxxclass}.h")
     ENDIF(EXISTS "${${kit}_include_dirs}/${cxxclass}.h")
-
     ADD_CUSTOM_COMMAND(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/xml/${cxxclass}.xml
       COMMAND ${gccxml_EXECUTABLE}
       ARGS
-        -fxml=${CMAKE_CURRENT_BINARY_DIR}/xml/${cxxclass}.xml
-        -fxml-start=_cable_
+		${executable_output}/xml/${cxxclass}.xml
+		${executable_options}
         ${gccxml_include_args} -DCABLE_CONFIGURATION
-        --gccxml-compiler ${CMAKE_CXX_COMPILER}
         ${CMAKE_CURRENT_BINARY_DIR}/xml/${cxxclass}_gccxml.cxx
       DEPENDS
         ${CMAKE_CURRENT_BINARY_DIR}/xml/${cxxclass}_gccxml.cxx

@@ -303,6 +303,21 @@ MACRO(WRAP_CLASSES_FOR_CSHARP wcfc_WrappedLibName wcfc_DependentTargets wcfc_Dep
   SET(wcfc_ExportLayerFiles "")
   SET(wcfc_GccxmlIncludes "")
 
+IF(${gccxml_EXECUTABLE} MATCHES "castxml")
+    SET(executable_output -o ${wcfc_BinDir})
+
+	IF(MSVC)
+		SET(castxml_options -fms-compatibility -fms-extensions -fmsc-version=${MSVC_VERSION} --castxml-cc-msvc ${CMAKE_CXX_COMPILER})
+	ELSE(MSVC)
+		SET(castxml_options --castxml-cc-gnu ${CMAKE_CXX_COMPILER})
+	ENDIF(MSVC)
+
+	SET(executable_options --castxml-start _cable_ --castxml-gccxml ${castxml_options} -D__CASTXML__)
+ELSE(${gccxml_EXECUTABLE} MATCHES "castxml")
+    SET(executable_output -fxml=${wcfc_BinDir})
+	SET(executable_options -fxml-start=_cable_ --gccxml-compiler ${CMAKE_CXX_COMPILER})
+ENDIF(${gccxml_EXECUTABLE} MATCHES "castxml")
+
   FOREACH(instruction ${ARGN})
     IF("${instruction}" MATCHES "(.+),(.+)")
       STRING(REGEX REPLACE "(.+),(.+)" "\\1" wcfc_Class "${instruction}")
@@ -319,7 +334,7 @@ MACRO(WRAP_CLASSES_FOR_CSHARP wcfc_WrappedLibName wcfc_DependentTargets wcfc_Dep
       SET(wcfc_ClassName "${wcfc_Class}")
     ENDIF("${wcfc_Class}" MATCHES "^.*::([^:]+)$")
 
-    SET(wcfc_GccxmlFile "${wcfc_BinDir}/xml/${wcfc_FileBaseName}.xml")
+    SET(wcfc_GccxmlFile "/xml/${wcfc_FileBaseName}.xml")
     SET(wcfc_CsharpFile "${wcfc_BinDir}/csharp/${wcfc_FileBaseName}.cs")
     SET(wcfc_ExportLayerFile "${wcfc_BinDir}/export-layer/${wcfc_FileBaseName}EL.cxx")
 
@@ -330,14 +345,13 @@ MACRO(WRAP_CLASSES_FOR_CSHARP wcfc_WrappedLibName wcfc_DependentTargets wcfc_Dep
     )
 
     ADD_CUSTOM_COMMAND(
-      OUTPUT ${wcfc_GccxmlFile}
+      OUTPUT ${wcfc_BinDir}${wcfc_GccxmlFile}
       COMMAND ${gccxml_EXECUTABLE}
       ARGS
-        -fxml=${wcfc_GccxmlFile}
-        -fxml-start=_cable_
+		${executable_output}${wcfc_GccxmlFile}
+		${executable_options}
         ${wcfc_GccxmlIncludes}
         -DCABLE_CONFIGURATION
-        --gccxml-compiler ${CMAKE_CXX_COMPILER}
         ${wcfc_BinDir}/xml/${wcfc_FileBaseName}_gccxml.cxx
       DEPENDS
         ${wcfc_BinDir}/xml/${wcfc_FileBaseName}_gccxml.cxx
@@ -350,12 +364,12 @@ MACRO(WRAP_CLASSES_FOR_CSHARP wcfc_WrappedLibName wcfc_DependentTargets wcfc_Dep
       COMMAND ${mummy_EXECUTABLE}
       ARGS
         --settings-file ${wcfc_BinDir}/xml/${wcfc_WrappedLibName}.MummySettings.xml
-        --gccxml-file ${wcfc_GccxmlFile}
+        --gccxml-file ${wcfc_BinDir}${wcfc_GccxmlFile}
         --csharp-file ${wcfc_CsharpFile}
         --export-layer-file ${wcfc_ExportLayerFile}
       DEPENDS
         ${wcfc_BinDir}/xml/${wcfc_WrappedLibName}.MummySettings.xml
-        ${wcfc_GccxmlFile}
+        ${wcfc_BinDir}${wcfc_GccxmlFile}
         ${mummy_EXECUTABLE}
       )
 
