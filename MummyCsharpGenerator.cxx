@@ -764,11 +764,18 @@ bool MummyCsharpGenerator::FundamentalTypeIsWrappable(const cable::Type* t)
 bool MummyCsharpGenerator::TypeIsWrappable(const cable::Type* t)
 {
   bool wrappable = false;
+  cable::Class* c;
 
   switch (t->GetTypeId())
     {
     case cable::Type::EnumerationTypeId:
       wrappable = true;
+	  c = cable::Class::SafeDownCast(cable::EnumerationType::SafeDownCast(t)->GetEnumeration()->GetContext());
+	  if (c) 
+	  {
+		  //if the enumeration has class scope, then the class must be wrappable too
+		  wrappable = ClassIsWrappable(c);
+	  }
     break;
 
     case cable::Type::FundamentalTypeId:
