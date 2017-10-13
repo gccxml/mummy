@@ -2755,9 +2755,9 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
   //
   EmitIndent(os, indent);
 
+  bool isArray = (retArraySize != "");
   if (!voidReturn)
     {
-	bool isArray = (retArraySize != "");
     if (isArray)
       {
       Emit(os, rvpType.c_str());
@@ -2786,14 +2786,14 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
       Emit(os, rvType.c_str());
       Emit(os, " rv = "); // rv == return value
       }
-
-	  // Open any special marshalling blocks required:
-	  //
-	  if (IsCharPointer(retType) && !isArray)
-	  {
-		  Emit(os, "Marshal.PtrToStringAnsi(");
-	  }
     }
+
+  // Open any special marshalling blocks required:
+  //
+  if (!isArray && IsCharPointer(retType))
+  {
+	  Emit(os, "Marshal.PtrToStringAnsi(");
+  }
 
   // Call the DllImport function:
   //
@@ -3006,7 +3006,7 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
 
     Emit(os, "\n");
     }
-  else if (IsCharPointer(retType))
+  else if (!isArray && IsCharPointer(retType))
     {
     Emit(os, ");\n");
     }
