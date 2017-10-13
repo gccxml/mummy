@@ -295,77 +295,86 @@ bool MummyCsharpGenerator::IsReservedMethodName(const gxsys_stl::string &name)
     name == "ToString");
 }
 
+//----------------------------------------------------------------------------
+gxsys_stl::string MummyCsharpGenerator::GetFundamentalTypeString(const cxx::FundamentalType::Id typeId, bool isArray)
+{
+	gxsys_stl::string s;
+
+	switch (typeId)
+	{
+	case cxx::FundamentalType::Char:
+	case cxx::FundamentalType::UnsignedChar:
+		s = "byte";
+		break;
+
+	case cxx::FundamentalType::UnsignedShortInt:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::ShortInt) : "ushort";
+		break;
+
+	case cxx::FundamentalType::UnsignedInt:
+	case cxx::FundamentalType::UnsignedLongInt:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::Int) : "uint";
+		break;
+
+	case cxx::FundamentalType::SignedChar:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::UnsignedChar) : "sbyte";
+		break;
+
+	case cxx::FundamentalType::ShortInt:
+		s = "short";
+		break;
+
+	case cxx::FundamentalType::Int:
+	case cxx::FundamentalType::LongInt:
+		s = "int";
+		break;
+
+	case cxx::FundamentalType::Bool:
+		s = "bool";
+		break;
+
+	case cxx::FundamentalType::Float:
+		s = "float";
+		break;
+
+	case cxx::FundamentalType::Double:
+		s = "double";
+		break;
+
+	case cxx::FundamentalType::Void:
+		s = "void";
+		break;
+
+	case cxx::FundamentalType::UnsignedLongLongInt:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::LongLongInt) : "ulong";
+		break;
+
+	case cxx::FundamentalType::LongLongInt:
+		s = "long";
+		break;
+
+		//case cxx::FundamentalType::WChar_t:
+		//case cxx::FundamentalType::LongDouble:
+		//case cxx::FundamentalType::ComplexFloat:
+		//case cxx::FundamentalType::ComplexDouble:
+		//case cxx::FundamentalType::ComplexLongDouble:
+		//case cxx::FundamentalType::NumberOfTypes:
+
+	default:
+		break;
+	}
+
+	return s;
+}
 
 //----------------------------------------------------------------------------
-gxsys_stl::string MummyCsharpGenerator::GetFundamentalTypeString(const cable::Type *t)
+gxsys_stl::string MummyCsharpGenerator::GetFundamentalTypeString(const cable::Type *t, bool isArray)
 {
   gxsys_stl::string s;
 
   if (cable::Type::FundamentalTypeId == t->GetTypeId())
     {
-    switch (cxx::FundamentalType::SafeDownCast(t->GetCxxType().GetType())->GetId())
-      {
-      case cxx::FundamentalType::UnsignedChar:
-        s = "byte";
-      break;
-
-      case cxx::FundamentalType::UnsignedShortInt:
-        s = "ushort";
-      break;
-
-      case cxx::FundamentalType::UnsignedInt:
-      case cxx::FundamentalType::UnsignedLongInt:
-        s = "uint";
-      break;
-
-      case cxx::FundamentalType::SignedChar:
-      case cxx::FundamentalType::Char:
-        s = "sbyte";
-      break;
-
-      case cxx::FundamentalType::ShortInt:
-        s = "short";
-      break;
-
-      case cxx::FundamentalType::Int:
-      case cxx::FundamentalType::LongInt:
-        s = "int";
-      break;
-
-      case cxx::FundamentalType::Bool:
-        s = "bool";
-      break;
-
-      case cxx::FundamentalType::Float:
-        s = "float";
-      break;
-
-      case cxx::FundamentalType::Double:
-        s = "double";
-      break;
-
-      case cxx::FundamentalType::Void:
-        s = "void";
-      break;
-
-      case cxx::FundamentalType::UnsignedLongLongInt:
-        s = "ulong";
-      break;
-
-      case cxx::FundamentalType::LongLongInt:
-        s = "long";
-      break;
-
-      //case cxx::FundamentalType::WChar_t:
-      //case cxx::FundamentalType::LongDouble:
-      //case cxx::FundamentalType::ComplexFloat:
-      //case cxx::FundamentalType::ComplexDouble:
-      //case cxx::FundamentalType::ComplexLongDouble:
-      //case cxx::FundamentalType::NumberOfTypes:
-
-      default:
-      break;
-      }
+	  s = GetFundamentalTypeString(cxx::FundamentalType::SafeDownCast(t->GetCxxType().GetType())->GetId(), isArray);
     }
 
   if (s == "")
@@ -1151,7 +1160,7 @@ gxsys_stl::string MummyCsharpGenerator::GetPInvokeTypeString(const cable::Type *
     break;
 
     case cable::Type::FundamentalTypeId:
-      s = GetFundamentalTypeString(t);
+      s = GetFundamentalTypeString(t, isArray);
 
       // C# byte maps automatically to C++ bool via PInvoke
       //
@@ -1325,7 +1334,7 @@ gxsys_stl::string MummyCsharpGenerator::GetCSharpTypeString(const cable::Type *t
     break;
 
     case cable::Type::FundamentalTypeId:
-      s = GetFundamentalTypeString(t);
+      s = GetFundamentalTypeString(t, isArray);
     break;
 
     case cable::Type::ArrayTypeId:
@@ -1345,7 +1354,7 @@ gxsys_stl::string MummyCsharpGenerator::GetCSharpTypeString(const cable::Type *t
         {
         s = GetCSharpTypeString(nested_type, forReturn, isArray);
         }
-      else if (IsChar(nested_type))
+      else if (IsChar(nested_type) && !isArray)
         {
         s = "string";
         }
@@ -2748,7 +2757,8 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
 
   if (!voidReturn)
     {
-    if (retArraySize != "")
+	bool isArray = (retArraySize != "");
+    if (isArray)
       {
       Emit(os, rvpType.c_str());
       Emit(os, " rvp = "); // rvp == return value pointer
@@ -2776,13 +2786,13 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
       Emit(os, rvType.c_str());
       Emit(os, " rv = "); // rv == return value
       }
-    }
 
-  // Open any special marshalling blocks required:
-  //
-  if (IsCharPointer(retType))
-    {
-    Emit(os, "Marshal.PtrToStringAnsi(");
+	  // Open any special marshalling blocks required:
+	  //
+	  if (IsCharPointer(retType) && !isArray)
+	  {
+		  Emit(os, "Marshal.PtrToStringAnsi(");
+	  }
     }
 
   // Call the DllImport function:
