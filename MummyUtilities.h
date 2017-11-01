@@ -23,6 +23,8 @@
 #include "gxsys/ios/iosfwd"
 #include "gxsys/stl/string"
 
+extern const std::string ANNOTATION_TEXT;
+
 namespace cable
 {
   class Class;
@@ -88,5 +90,6 @@ bool ShouldEmitComment(const char *comment);
 gxsys_stl::string EncodeStringForXml(const char *s);
 void EmitDocumentationBlock(gxsys_ios::ostream &os, const gxsys_stl::vector<gxsys_stl::string>& block, const unsigned int indent, bool isClassDoc = false);
 gxsys_stl::string ExtractDerivedName(const char *s, const cable::Named *n, bool verbose);
+bool HasAnnotation(const cable::SourceObject *o, const gxsys_stl::string& tag);
 
 #endif

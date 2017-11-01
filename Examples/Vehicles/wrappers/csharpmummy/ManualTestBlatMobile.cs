@@ -50,7 +50,7 @@ namespace Vehicles
        b1.VUnsignedInt(0x2222);
        b1.VUnsignedLong(0x33333333);
        b1.VUnsignedInt64(0x4444444444444444);
-       b1.VChar((sbyte)'b');
+       b1.VChar((byte)'b');
        b1.VShort(0x55);
        b1.VInt(0x6666);
        b1.VLong(0x77777777);

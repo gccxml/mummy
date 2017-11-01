@@ -44,15 +44,29 @@ CONFIGURE_FILE(
   @ONLY
   )
 
+IF(${gccxml_EXECUTABLE} MATCHES "castxml")
+    SET(executable_output -o ${gccxml_output})
+
+	IF(MSVC)
+		SET(compiler msvc)
+	ELSE(MSVC)
+		SET(compiler gnu)
+	ENDIF(MSVC)
+
+	SET(executable_options --castxml-start _cable_ --castxml-gccxml --castxml-cc-${compiler} ${CMAKE_CXX_COMPILER} -D__CASTXML__)
+ELSE(${gccxml_EXECUTABLE} MATCHES "castxml")
+    SET(executable_output -fxml=${gccxml_output})
+	SET(executable_options -fxml-start=_cable_ --gccxml-compiler ${CMAKE_CXX_COMPILER})
+ENDIF(${gccxml_EXECUTABLE} MATCHES "castxml")
+
 ADD_CUSTOM_COMMAND(
   OUTPUT ${gccxml_output}
   COMMAND ${gccxml_EXECUTABLE}
   ARGS
-    -fxml=${gccxml_output}
-    -fxml-start=_cable_
+	${executable_output}
+	${executable_options}
     -I${CMAKE_CURRENT_SOURCE_DIR}
     -DCABLE_CONFIGURATION
-    --gccxml-compiler ${CMAKE_CXX_COMPILER}
     ${CMAKE_CURRENT_BINARY_DIR}/simple_gccxml.cxx
   DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/simple_gccxml.cxx

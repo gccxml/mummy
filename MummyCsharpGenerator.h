@@ -29,7 +29,7 @@ public:
 
   virtual bool IsKeyword(const char *p);
   virtual bool IsReservedMethodName(const gxsys_stl::string &name);
-  virtual gxsys_stl::string GetFundamentalTypeString(const cable::Type *t);
+  virtual gxsys_stl::string GetFundamentalTypeString(const cable::Type *t, bool isArray);
   virtual gxsys_stl::string GetWrappedMethodName(const cable::Method *m);
   virtual gxsys_stl::string GetMethodArgumentArraySize(const cable::Class *c, const cable::Method *m, const cable::FunctionType *ft, unsigned int i);
   virtual gxsys_stl::string GetMethodSignature(const cable::Class *c, const cable::Method *m);
@@ -105,6 +105,8 @@ private:
 
   MummyCsharpGenerator(const MummyCsharpGenerator&); //Not implemented
   MummyCsharpGenerator& operator=(const MummyCsharpGenerator&); //Not implemented
+
+  gxsys_stl::string GetFundamentalTypeString(const cxx::FundamentalType::Id typeId, bool isArray = false);
 };
 
 #endif

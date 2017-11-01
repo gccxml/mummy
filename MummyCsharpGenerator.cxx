@@ -295,77 +295,86 @@ bool MummyCsharpGenerator::IsReservedMethodName(const gxsys_stl::string &name)
     name == "ToString");
 }
 
+//----------------------------------------------------------------------------
+gxsys_stl::string MummyCsharpGenerator::GetFundamentalTypeString(const cxx::FundamentalType::Id typeId, bool isArray)
+{
+	gxsys_stl::string s;
+
+	switch (typeId)
+	{
+	case cxx::FundamentalType::Char:
+	case cxx::FundamentalType::UnsignedChar:
+		s = "byte";
+		break;
+
+	case cxx::FundamentalType::UnsignedShortInt:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::ShortInt) : "ushort";
+		break;
+
+	case cxx::FundamentalType::UnsignedInt:
+	case cxx::FundamentalType::UnsignedLongInt:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::Int) : "uint";
+		break;
+
+	case cxx::FundamentalType::SignedChar:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::UnsignedChar) : "sbyte";
+		break;
+
+	case cxx::FundamentalType::ShortInt:
+		s = "short";
+		break;
+
+	case cxx::FundamentalType::Int:
+	case cxx::FundamentalType::LongInt:
+		s = "int";
+		break;
+
+	case cxx::FundamentalType::Bool:
+		s = "bool";
+		break;
+
+	case cxx::FundamentalType::Float:
+		s = "float";
+		break;
+
+	case cxx::FundamentalType::Double:
+		s = "double";
+		break;
+
+	case cxx::FundamentalType::Void:
+		s = "void";
+		break;
+
+	case cxx::FundamentalType::UnsignedLongLongInt:
+		s = isArray ? GetFundamentalTypeString(cxx::FundamentalType::LongLongInt) : "ulong";
+		break;
+
+	case cxx::FundamentalType::LongLongInt:
+		s = "long";
+		break;
+
+		//case cxx::FundamentalType::WChar_t:
+		//case cxx::FundamentalType::LongDouble:
+		//case cxx::FundamentalType::ComplexFloat:
+		//case cxx::FundamentalType::ComplexDouble:
+		//case cxx::FundamentalType::ComplexLongDouble:
+		//case cxx::FundamentalType::NumberOfTypes:
+
+	default:
+		break;
+	}
+
+	return s;
+}
 
 //----------------------------------------------------------------------------
-gxsys_stl::string MummyCsharpGenerator::GetFundamentalTypeString(const cable::Type *t)
+gxsys_stl::string MummyCsharpGenerator::GetFundamentalTypeString(const cable::Type *t, bool isArray)
 {
   gxsys_stl::string s;
 
   if (cable::Type::FundamentalTypeId == t->GetTypeId())
     {
-    switch (cxx::FundamentalType::SafeDownCast(t->GetCxxType().GetType())->GetId())
-      {
-      case cxx::FundamentalType::UnsignedChar:
-        s = "byte";
-      break;
-
-      case cxx::FundamentalType::UnsignedShortInt:
-        s = "ushort";
-      break;
-
-      case cxx::FundamentalType::UnsignedInt:
-      case cxx::FundamentalType::UnsignedLongInt:
-        s = "uint";
-      break;
-
-      case cxx::FundamentalType::SignedChar:
-      case cxx::FundamentalType::Char:
-        s = "sbyte";
-      break;
-
-      case cxx::FundamentalType::ShortInt:
-        s = "short";
-      break;
-
-      case cxx::FundamentalType::Int:
-      case cxx::FundamentalType::LongInt:
-        s = "int";
-      break;
-
-      case cxx::FundamentalType::Bool:
-        s = "bool";
-      break;
-
-      case cxx::FundamentalType::Float:
-        s = "float";
-      break;
-
-      case cxx::FundamentalType::Double:
-        s = "double";
-      break;
-
-      case cxx::FundamentalType::Void:
-        s = "void";
-      break;
-
-      case cxx::FundamentalType::UnsignedLongLongInt:
-        s = "ulong";
-      break;
-
-      case cxx::FundamentalType::LongLongInt:
-        s = "long";
-      break;
-
-      //case cxx::FundamentalType::WChar_t:
-      //case cxx::FundamentalType::LongDouble:
-      //case cxx::FundamentalType::ComplexFloat:
-      //case cxx::FundamentalType::ComplexDouble:
-      //case cxx::FundamentalType::ComplexLongDouble:
-      //case cxx::FundamentalType::NumberOfTypes:
-
-      default:
-      break;
-      }
+	  s = GetFundamentalTypeString(cxx::FundamentalType::SafeDownCast(t->GetCxxType().GetType())->GetId(), isArray);
     }
 
   if (s == "")
@@ -461,9 +470,19 @@ bool ReturnTypeMatchesHintType(
   // Values of 'type' currently present in the VTK hints file are:
   //
   if      (utype ==  "301") { ftid = cxx::FundamentalType::Float; }
+  else if (utype == "303") { ftid = cxx::FundamentalType::Char; }
   else if (utype ==  "304") { ftid = cxx::FundamentalType::Int; }
+  else if (utype == "305") { ftid = cxx::FundamentalType::ShortInt; }
+  else if (utype == "306") { ftid = cxx::FundamentalType::LongInt; }
   else if (utype ==  "307") { ftid = cxx::FundamentalType::Double; }
+  else if (utype == "313") { ftid = cxx::FundamentalType::UnsignedChar; }
+  else if (utype == "314") { ftid = cxx::FundamentalType::UnsignedInt; }
+  else if (utype == "315") { ftid = cxx::FundamentalType::UnsignedShortInt; }
+  else if (utype == "316") { ftid = cxx::FundamentalType::UnsignedLongInt; }
   else if (utype ==  "30A") { ftid = cxx::FundamentalType::Int; } // vtkIdType (could be 32 or 64 bit...)
+  else if (utype == "30B") { ftid = cxx::FundamentalType::LongLongInt; } // vtkIdType (could be 32 or 64 bit...)
+  else if (utype == "30D") { ftid = cxx::FundamentalType::SignedChar; }
+  else if (utype == "31B") { ftid = cxx::FundamentalType::UnsignedLongLongInt; }
   else if (utype == "2307") { ftid = cxx::FundamentalType::Double; } // 0x2307 == double* + something?
 
   if (cxx::FundamentalType::NumberOfTypes == ftid)
@@ -754,11 +773,18 @@ bool MummyCsharpGenerator::FundamentalTypeIsWrappable(const cable::Type* t)
 bool MummyCsharpGenerator::TypeIsWrappable(const cable::Type* t)
 {
   bool wrappable = false;
+  cable::Class* enum_class;
 
   switch (t->GetTypeId())
     {
     case cable::Type::EnumerationTypeId:
       wrappable = true;
+	  enum_class = cable::Class::SafeDownCast(cable::EnumerationType::SafeDownCast(t)->GetEnumeration()->GetContext());
+	  if (enum_class) 
+	  {
+		  //if the enumeration has class scope, then the class must be wrappable too
+		  wrappable = ClassIsWrappable(enum_class);
+	  }
     break;
 
     case cable::Type::FundamentalTypeId:
@@ -927,7 +953,7 @@ bool MummyCsharpGenerator::MethodWrappableAsEvent(const cable::Method* m, const 
       if (cable::Function::FunctionId == m->GetFunctionId() ||
         cable::Function::MethodId == m->GetFunctionId())
         {
-        wrappableAsEvent = HasAttribute(m, "gccxml(iwhEvent)");
+        wrappableAsEvent = HasAnnotation(m, "iwhEvent");
         }
       }
     }
@@ -961,7 +987,7 @@ bool MummyCsharpGenerator::MethodIsWrappable(const cable::Method* m, const cable
   if (m && wrappable)
     {
     hasDeprecatedAttribute = HasAttribute(m, "deprecated");
-    hasExcludeAttribute = HasAttribute(m, "gccxml(iwhExclude)");
+    hasExcludeAttribute = HasAnnotation(m, "iwhExclude");
 
     if (hasDeprecatedAttribute || hasExcludeAttribute)
       {
@@ -1010,7 +1036,7 @@ bool MummyCsharpGenerator::MethodIsWrappable(const cable::Method* m, const cable
             else if (hasExcludeAttribute)
               {
               LogWarning(mw_CouldNotWrap, << m->GetNameOfClass() << " '" << m->GetName()
-                << "' could not be wrapped because it is marked with the 'gccxml(iwhExclude)' attribute..." << gxsys_ios::endl);
+				  << "' could not be wrapped because it is marked with the 'iwhExclude' annotation..." << gxsys_ios::endl);
               }
             else if (isExcludedViaBtxEtx)
               {
@@ -1134,7 +1160,7 @@ gxsys_stl::string MummyCsharpGenerator::GetPInvokeTypeString(const cable::Type *
     break;
 
     case cable::Type::FundamentalTypeId:
-      s = GetFundamentalTypeString(t);
+      s = GetFundamentalTypeString(t, isArray);
 
       // C# byte maps automatically to C++ bool via PInvoke
       //
@@ -1232,7 +1258,7 @@ gxsys_stl::string MummyCsharpGenerator::GetPInvokeTypeString(const cable::Type *
 
     case cable::Type::ReferenceTypeId:
       {
-      cable::Type *nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
+      nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
       cable::Type::TypeIdType nested_type_id = nested_type->GetTypeId();
 
       s = "ERROR_ReferenceTypeId_not_yet_implemented_for_nested_type";
@@ -1308,7 +1334,7 @@ gxsys_stl::string MummyCsharpGenerator::GetCSharpTypeString(const cable::Type *t
     break;
 
     case cable::Type::FundamentalTypeId:
-      s = GetFundamentalTypeString(t);
+      s = GetFundamentalTypeString(t, isArray);
     break;
 
     case cable::Type::ArrayTypeId:
@@ -1328,7 +1354,7 @@ gxsys_stl::string MummyCsharpGenerator::GetCSharpTypeString(const cable::Type *t
         {
         s = GetCSharpTypeString(nested_type, forReturn, isArray);
         }
-      else if (IsChar(nested_type))
+      else if (IsChar(nested_type) && !isArray)
         {
         s = "string";
         }
@@ -1373,7 +1399,7 @@ gxsys_stl::string MummyCsharpGenerator::GetCSharpTypeString(const cable::Type *t
 
     case cable::Type::ReferenceTypeId:
       {
-      cable::Type *nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
+      nested_type = cable::ReferenceType::SafeDownCast(t)->GetTarget();
       cable::Type::TypeIdType nested_type_id = nested_type->GetTypeId();
 
       s = "ERROR_ReferenceTypeId_not_yet_implemented_for_nested_type";
@@ -1660,7 +1686,7 @@ bool MummyCsharpGenerator::MethodReturnValueIsCounted(const cable::Class *c, con
     return true;
     }
 
-  if (HasAttribute(m, "gccxml(iwhCounted)"))
+  if (HasAnnotation(m, "iwhCounted"))
     {
     return true;
     }
@@ -2729,9 +2755,10 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
   //
   EmitIndent(os, indent);
 
+  bool isArray = (retArraySize != "");
   if (!voidReturn)
     {
-    if (retArraySize != "")
+    if (isArray)
       {
       Emit(os, rvpType.c_str());
       Emit(os, " rvp = "); // rvp == return value pointer
@@ -2763,10 +2790,10 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
 
   // Open any special marshalling blocks required:
   //
-  if (IsCharPointer(retType))
-    {
-    Emit(os, "Marshal.PtrToStringAnsi(");
-    }
+  if (!isArray && IsCharPointer(retType))
+  {
+	  Emit(os, "Marshal.PtrToStringAnsi(");
+  }
 
   // Call the DllImport function:
   //
@@ -2979,7 +3006,7 @@ void MummyCsharpGenerator::EmitCSharpMethodBody(gxsys_ios::ostream &os, unsigned
 
     Emit(os, "\n");
     }
-  else if (IsCharPointer(retType))
+  else if (!isArray && IsCharPointer(retType))
     {
     Emit(os, ");\n");
     }
@@ -3509,7 +3536,7 @@ void MummyCsharpGenerator::EmitCSharpWrapperClassAsStruct(gxsys_ios::ostream &os
   gxsys_stl::string fieldType;
   gxsys_stl::vector<gxsys_stl::string> docblock;
   bool isPartial = this->GetSettings()->GetPartialClass(c);
-  bool fieldAccess = !HasAttribute(c, "gccxml(iwhNoFieldAccess)");
+  bool fieldAccess = !HasAnnotation(c, "iwhNoFieldAccess");
 
   // First iterate and collect all the fields in a local vector:
   //
@@ -3879,7 +3906,7 @@ bool MummyCsharpGenerator::ValidateWrappedMethods(
           "'Getter' method '" << m->GetName() << "' has arguments. Should it?");
         }
 
-      if (!iwhPropGetExempt && !HasAttribute(m, "gccxml(iwhPropGet)"))
+      if (!iwhPropGetExempt && !HasAnnotation(m, "iwhPropGet"))
         {
         if (!voidReturn && 0==cArgs)
           {
@@ -3904,7 +3931,7 @@ bool MummyCsharpGenerator::ValidateWrappedMethods(
       {
       // It's a "setter" : warn if it's missing the iwhPropSet hint:
       //
-      if (!HasAttribute(m, "gccxml(iwhPropSet)"))
+      if (!HasAnnotation(m, "iwhPropSet"))
         {
         if (voidReturn && 1==cArgs)
           {
@@ -3946,8 +3973,8 @@ void MummyCsharpGenerator::BuildPropGetsAndSetsMap(
 
   for (mit = wrapped_methods.begin(); mit != wrapped_methods.end(); ++mit)
     {
-    addingPropGet = HasAttribute(*mit, "gccxml(iwhPropGet)");
-    addingPropSet = addingPropGet ? false : HasAttribute(*mit, "gccxml(iwhPropSet)");
+    addingPropGet = HasAnnotation(*mit, "iwhPropGet");
+    addingPropSet = addingPropGet ? false : HasAnnotation(*mit, "iwhPropSet");
 
     if (addingPropGet || addingPropSet)
       {
@@ -4632,7 +4659,7 @@ void MummyCsharpGenerator::EmitCSharpWrapperClass(gxsys_ios::ostream &os, const 
         bool isDelegate = false;
         gxsys_stl::string tname(t->GetName());
 
-        //isDelegate = HasAttribute(t, "gccxml(iwhDelegate)");
+        //isDelegate = HasAnnotation(t, "iwhDelegate");
 
         cable::PointerType *pt = cable::PointerType::SafeDownCast(t->GetType());
         cable::FunctionType *ft = 0;
